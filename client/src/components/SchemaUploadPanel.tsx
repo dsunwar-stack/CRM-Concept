@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import type { Schema } from "../types";
+import SchemaBuilderForm from "./SchemaBuilderForm";
 
 const JSON_EXAMPLE = `{
   "name": "Complaint Handling",
@@ -15,10 +16,10 @@ const JSON_EXAMPLE = `{
   ]
 }`;
 
-type Tab = "excel" | "json";
+type Tab = "excel" | "json" | "build";
 
 export default function SchemaUploadPanel({ onCreated }: { onCreated: () => void }) {
-  const [tab, setTab] = useState<Tab>("excel");
+  const [tab, setTab] = useState<Tab>("build");
   const [excelName, setExcelName] = useState("");
   const [fileLabel, setFileLabel] = useState<string | null>(null);
   const [jsonText, setJsonText] = useState(JSON_EXAMPLE);
@@ -70,12 +71,12 @@ export default function SchemaUploadPanel({ onCreated }: { onCreated: () => void
     <div className="rounded-xl border border-slate-200 bg-white p-6">
       <h2 className="text-lg font-semibold text-slate-900">Generate a new form from a schema</h2>
       <p className="mt-1 text-sm text-slate-500">
-        Excel is the primary input — most PMs and analysts already work in spreadsheets. JSON is
-        offered as an advanced path for technical users or system integration.
+        Build one field-by-field here, upload an Excel sheet (the primary path most PMs and
+        analysts already work in), or import JSON directly for technical/system integration use.
       </p>
 
       <div className="mt-4 flex gap-1 border-b border-slate-200">
-        {(["excel", "json"] as Tab[]).map((t) => (
+        {(["build", "excel", "json"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -85,12 +86,14 @@ export default function SchemaUploadPanel({ onCreated }: { onCreated: () => void
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            {t === "excel" ? "Excel upload (.xlsx)" : "JSON import"}
+            {t === "build" ? "Build a form" : t === "excel" ? "Excel upload (.xlsx)" : "JSON import"}
           </button>
         ))}
       </div>
 
-      {tab === "excel" ? (
+      {tab === "build" ? (
+        <SchemaBuilderForm onCreated={onCreated} />
+      ) : tab === "excel" ? (
         <form onSubmit={submitExcel} className="mt-4 space-y-3">
           <p className="text-xs text-slate-500">
             Expected columns: <code>Field Name</code>, <code>Type</code>{" "}

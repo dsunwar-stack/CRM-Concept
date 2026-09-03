@@ -21,9 +21,12 @@ This is a working MVP scoped to the brief's Section 9 minimum viable build:
   3–5 → radio, 6–20 → dropdown, 20+ → typeahead) plus the additional default rules (dates,
   yes/no, long text, small numeric ranges). This is enforced server-side; standard users cannot
   bypass it from the UI.
-- **Schema-to-form generation** — Excel upload (`POST /api/schemas/excel`, primary path) and
-  JSON import (`POST /api/schemas/json`, advanced/technical path), both producing a working,
-  consistently-styled form automatically.
+- **Schema-to-form generation** — three ways in: a **field-by-field builder** right in the UI
+  (add fields, pick a type, set options/min-max, see the rules-engine's component choice update
+  live as you type), Excel upload (`POST /api/schemas/excel`, the brief's primary path), and JSON
+  import (`POST /api/schemas/json`, advanced/technical path). All three produce a working,
+  consistently-styled form automatically — the builder and Excel paths both go through the same
+  `/api/schemas/json` contract under the hood.
 - **The expert override system** — gated to an `expert` role, requiring a Nielsen heuristic
   selection plus a research reference and a product justification before an override can save.
   Overridden fields show a "customised — see rationale" badge visible to everyone.
@@ -77,7 +80,12 @@ A demo schema ("Customer Case Intake", matching the brief's own Excel example) a
 triage pipeline (matching the brief's own bottleneck example) are seeded automatically the
 first time the API starts.
 
-### Uploading your own schema
+### Creating your own schema
+
+**Build a form** (no file needed) — on the Schemas page, the "Build a form" tab lets you add
+fields one at a time: name, type, options (for select fields), required, and — for number
+fields — a min/max range. Each field shows a live "rules-engine preview" of which component it
+will become before you save.
 
 **Excel** — one row per field, columns: `Field Name`, `Type` (`select` / `text` / `longtext` /
 `date` / `boolean` / `number`), `Options Count`, `Required` (`Yes`/`No`), `Options List`
