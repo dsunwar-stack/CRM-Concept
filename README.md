@@ -34,6 +34,13 @@ This is a working MVP scoped to the brief's Section 9 minimum viable build:
 - **Data & Security page** — the data-light architecture / "compliant by design now,
   certifiable later" posture from the brief, written out for users.
 
+Beyond the MVP scope, there's also a **Phase 2 prototype: the AI Case Assistant**
+(`client/src/pages/AgentWorkspacePage.tsx`) — a workspace for the frontline operational agent
+(the "300+ calls/chats a day, juggling channels and guides" persona) rather than the PM/analyst
+schema tool above. It summarises an incoming call/chat/email, suggests a case category, lays out
+a next-best-task roadmap, flags fraud signals, and drafts replies in a chosen tone. See "Real AI"
+below for wiring it to an actual model — it runs on a scripted local simulation by default.
+
 ## Architecture
 
 - `server/` — Node.js + Express API. Data-light by design: it stores schema/form structures,
@@ -88,6 +95,24 @@ first time the API starts.
   ]
 }
 ```
+
+### Real AI (optional)
+
+The AI Case Assistant's "Analyse with AI" and "Generate draft" actions call
+`server/src/routes/ai.js`, which uses Claude (`claude-opus-5`) when the server has an API key,
+and otherwise returns a 503 that the frontend catches automatically — falling back to
+`client/src/lib/simulatedAI.ts` and showing a small notice + a "simulated" badge, so the app
+always works with zero setup. To make it call a real model instead:
+
+```bash
+cd server
+cp .env.example .env
+# edit .env and set ANTHROPIC_API_KEY=sk-ant-... (get one at https://console.anthropic.com/settings/keys)
+npm run dev   # restart if it was already running
+```
+
+No frontend changes needed — once the key is set, the same buttons call Claude and the badge
+switches to "Claude Opus 5".
 
 ## Known limitations (deliberate, per the brief's v1 scope)
 

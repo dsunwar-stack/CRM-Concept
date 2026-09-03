@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { api } from "../api";
 import {
   analyzeTranscript,
   draftReply,
@@ -9,6 +10,7 @@ import {
 
 type Channel = "call" | "chat" | "email";
 type Tone = "empathetic" | "formal" | "concise";
+type AiSource = "real" | "simulated";
 
 const CHANNEL_LABELS: Record<Channel, string> = { call: "Call", chat: "Chat", email: "Email" };
 
@@ -24,6 +26,10 @@ export default function AgentWorkspacePage() {
   const [tone, setTone] = useState<Tone>("empathetic");
   const [draft, setDraft] = useState("");
   const [isDrafting, setIsDrafting] = useState(false);
+
+  const [analysisSource, setAnalysisSource] = useState<AiSource | null>(null);
+  const [draftSource, setDraftSource] = useState<AiSource | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
 
   const caseType = useMemo(
     () => CASE_TYPES.find((c) => c.id === selectedCaseTypeId) ?? null,
@@ -42,20 +48,36 @@ export default function AgentWorkspacePage() {
     setCompletedTasks(new Set());
     setRoutedToFraudQueue(false);
     setDraft("");
+    setAnalysisSource(null);
+    setDraftSource(null);
+    setAiNotice(null);
   }
 
-  function runAnalysis() {
+  async function runAnalysis() {
     setIsAnalyzing(true);
-    // Simulated "thinking" delay so the step feels like a real AI call —
-    // swap analyzeTranscript() for a real model call to make this genuine.
-    window.setTimeout(() => {
+    setAiNotice(null);
+    try {
+      // Try the real Claude-backed endpoint first — it 503s with a clear
+      // message if the server has no ANTHROPIC_API_KEY configured, in
+      // which case we fall back to the local scripted simulation below.
+      const result = await api.post<Analysis>("/ai/analyze", { transcript });
+      setAnalysis(result);
+      setSelectedCaseTypeId(result.suggestedCaseTypeId);
+      setAnalysisSource("real");
+    } catch (err) {
+      setAiNotice(
+        `Real AI unavailable (${err instanceof Error ? err.message : "unknown error"}) — showing the built-in simulated analysis instead.`
+      );
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
       const result = analyzeTranscript(transcript);
       setAnalysis(result);
       setSelectedCaseTypeId(result.suggestedCaseTypeId);
+      setAnalysisSource("simulated");
+    } finally {
       setCompletedTasks(new Set());
       setRoutedToFraudQueue(false);
       setIsAnalyzing(false);
-    }, 700);
+    }
   }
 
   function toggleTask(task: string) {
@@ -67,13 +89,24 @@ export default function AgentWorkspacePage() {
     });
   }
 
-  function generateDraft() {
+  async function generateDraft() {
     if (!caseType) return;
     setIsDrafting(true);
-    window.setTimeout(() => {
+    try {
+      const result = await api.post<{ draft: string }>("/ai/draft", {
+        caseTypeLabel: caseType.label,
+        tone,
+        transcript,
+      });
+      setDraft(result.draft);
+      setDraftSource("real");
+    } catch {
+      await new Promise((resolve) => window.setTimeout(resolve, 400));
       setDraft(draftReply(caseType.id, tone));
+      setDraftSource("simulated");
+    } finally {
       setIsDrafting(false);
-    }, 500);
+    }
   }
 
   const progress = caseType ? Math.round((completedTasks.size / caseType.roadmap.length) * 100) : 0;
@@ -88,10 +121,16 @@ export default function AgentWorkspacePage() {
           reply. No more switching between the phone/chat tool and a separate how-to guide.
         </p>
         <p className="mt-2 text-xs text-amber-600">
-          Prototype note: this page runs on scripted, keyword-based logic in the browser — not a real
-          model — so the flow can be demoed without an API key. See{" "}
-          <code className="rounded bg-amber-50 px-1 py-0.5">client/src/lib/simulatedAI.ts</code>.
+          Prototype note: calls a real Claude model on the backend when the server has
+          <code className="mx-1 rounded bg-amber-50 px-1 py-0.5">ANTHROPIC_API_KEY</code> set (see
+          <code className="mx-1 rounded bg-amber-50 px-1 py-0.5">server/.env.example</code>) — and
+          automatically falls back to a scripted, keyword-based simulation in{" "}
+          <code className="rounded bg-amber-50 px-1 py-0.5">client/src/lib/simulatedAI.ts</code>{" "}
+          otherwise, so the flow always works without a key.
         </p>
+        {aiNotice && (
+          <p className="mt-2 rounded-md bg-slate-100 px-3 py-2 text-xs text-slate-600">{aiNotice}</p>
+        )}
       </div>
 
       {/* Step 0 — intake */}
@@ -151,8 +190,9 @@ export default function AgentWorkspacePage() {
         <>
           {/* Step 1 — summary + category */}
           <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
               Step 1 · Summary &amp; categorisation
+              <SourceBadge source={analysisSource} />
             </h2>
             <p className="mt-2 text-sm text-slate-700">{analysis.summary}</p>
 
@@ -267,8 +307,9 @@ export default function AgentWorkspacePage() {
 
           {/* Draft assist */}
           <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
               Draft a reply
+              <SourceBadge source={draftSource} />
             </h2>
             <div className="mt-3 flex items-center gap-2">
               {(["empathetic", "formal", "concise"] as Tone[]).map((t) => (
@@ -303,5 +344,18 @@ export default function AgentWorkspacePage() {
         </>
       )}
     </div>
+  );
+}
+
+function SourceBadge({ source }: { source: "real" | "simulated" | null }) {
+  if (!source) return null;
+  return source === "real" ? (
+    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-700">
+      Claude Opus 5
+    </span>
+  ) : (
+    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-slate-600">
+      simulated
+    </span>
   );
 }

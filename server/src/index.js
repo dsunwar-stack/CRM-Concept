@@ -6,6 +6,7 @@ import schemaRoutes from "./routes/schemas.js";
 import overrideRoutes from "./routes/overrides.js";
 import triageRoutes from "./routes/triage.js";
 import auditRoutes from "./routes/audit.js";
+import aiRoutes from "./routes/ai.js";
 
 seedIfEmpty();
 
@@ -20,6 +21,7 @@ app.use("/api/schemas", schemaRoutes);
 app.use("/api", overrideRoutes);
 app.use("/api/triage", triageRoutes);
 app.use("/api/audit-log", auditRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use((req, res) => res.status(404).json({ error: `No route for ${req.method} ${req.path}` }));
 
