@@ -4,6 +4,7 @@ import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import FormPreviewPage from "./pages/FormPreviewPage";
+import AgentWorkspacePage from "./pages/AgentWorkspacePage";
 import TriageMapPage from "./pages/TriageMapPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import DataPolicyPage from "./pages/DataPolicyPage";
@@ -17,6 +18,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/schemas/:id" element={<FormPreviewPage />} />
+            <Route path="/agent-workspace" element={<AgentWorkspacePage />} />
             <Route path="/triage" element={<TriageMapPage />} />
             <Route path="/audit-log" element={<AuditLogPage />} />
             <Route path="/data-policy" element={<DataPolicyPage />} />

@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 
 const navItems = [
   { to: "/", label: "Schemas", end: true },
+  { to: "/agent-workspace", label: "AI Case Assistant" },
   { to: "/triage", label: "Triage Map" },
   { to: "/audit-log", label: "Audit Log" },
   { to: "/data-policy", label: "Data & Security" },
