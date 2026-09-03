@@ -53,6 +53,14 @@ export interface Schema {
   createdAt: string;
   updatedAt: string;
   fieldCount?: number;
+  hasJourney?: boolean;
+  journeySourceField?: string | null;
+}
+
+export interface JourneyInfo {
+  derived: boolean;
+  sourceField: string | null;
+  stageCount: number;
 }
 
 export interface TriageStage {

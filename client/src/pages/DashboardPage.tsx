@@ -36,6 +36,7 @@ export default function DashboardPage() {
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Source</th>
               <th className="px-4 py-3">Fields</th>
+              <th className="px-4 py-3">Journey</th>
               <th className="px-4 py-3">Created</th>
               <th className="px-4 py-3" />
             </tr>
@@ -43,14 +44,14 @@ export default function DashboardPage() {
           <tbody className="divide-y divide-slate-100">
             {schemas === null && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   Loading…
                 </td>
               </tr>
             )}
             {schemas?.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   No schemas yet — upload one below.
                 </td>
               </tr>
@@ -60,6 +61,18 @@ export default function DashboardPage() {
                 <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
                 <td className="px-4 py-3 uppercase text-slate-500">{s.sourceType}</td>
                 <td className="px-4 py-3 text-slate-600">{s.fieldCount}</td>
+                <td className="px-4 py-3">
+                  {s.hasJourney ? (
+                    <Link
+                      to={`/triage?schemaId=${s.id}`}
+                      className="text-xs font-medium text-emerald-700 hover:underline"
+                    >
+                      ✓ derived
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-slate-400">none</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-500">
                   {new Date(s.createdAt).toLocaleDateString()}
                 </td>

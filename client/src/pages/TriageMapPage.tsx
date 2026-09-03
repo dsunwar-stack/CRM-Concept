@@ -1,36 +1,92 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api";
-import type { TriageStage } from "../types";
+import type { Schema, TriageStage } from "../types";
 
 export default function TriageMapPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [schemas, setSchemas] = useState<Schema[] | null>(null);
+  const [schemaId, setSchemaId] = useState<string | null>(searchParams.get("schemaId"));
   const [stages, setStages] = useState<TriageStage[] | null>(null);
   const [selected, setSelected] = useState<TriageStage | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    api.get<{ schemas: Schema[] }>("/schemas").then((res) => {
+      setSchemas(res.schemas);
+      if (!schemaId && res.schemas.length > 0) {
+        const preferred = res.schemas.find((s) => s.hasJourney) ?? res.schemas[0];
+        setSchemaId(preferred.id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!schemaId) return;
+    setSearchParams({ schemaId }, { replace: true });
+    setStages(null);
+    setSelected(null);
     api
-      .get<{ stages: TriageStage[] }>("/triage")
+      .get<{ stages: TriageStage[] }>(`/triage?schemaId=${schemaId}`)
       .then((res) => {
         setStages(res.stages);
         setSelected(res.stages.find((s) => s.isBottleneck) ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load triage map."));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schemaId]);
+
+  const currentSchema = schemas?.find((s) => s.id === schemaId) ?? null;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Case pathway</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Volume and wait time surfaced at every stage — drawn from the same schema and data
-          structure used to build the forms. Click a stage to see why it's slow.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Case pathway</h1>
+          <p className="mt-1 max-w-2xl text-sm text-slate-500">
+            Volume and wait time surfaced at every stage — derived from the schema's own
+            status-like field, so every schema gets its own journey automatically. Click a stage
+            to see why it's slow.
+          </p>
+        </div>
+        {schemas && schemas.length > 0 && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">Schema</label>
+            <select
+              value={schemaId ?? ""}
+              onChange={(e) => setSchemaId(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              {schemas.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                  {!s.hasJourney ? " (no journey)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
+
+      {currentSchema?.journeySourceField && (
+        <p className="text-xs text-slate-400">
+          Journey derived from the "{currentSchema.journeySourceField}" field's options.
+        </p>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!stages && !error && <p className="text-sm text-slate-400">Loading…</p>}
 
-      {stages && (
+      {stages && stages.length === 0 && (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
+          No journey was derived for "{currentSchema?.name}" — it has no select-type field with
+          2–8 options (e.g. one named "Status" with values like Open/In Review/Closed). Add one
+          and re-create the schema to get a journey here automatically.
+        </div>
+      )}
+
+      {stages && stages.length > 0 && (
         <div className="flex flex-col gap-3 overflow-x-auto pb-2 md:flex-row md:items-stretch">
           {stages.map((stage, i) => (
             <div key={stage.id} className="flex items-stretch gap-3">

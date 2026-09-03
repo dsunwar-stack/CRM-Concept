@@ -50,6 +50,21 @@ export default function FormPreviewPage() {
           below was chosen by the rules engine — hover the “customised” badge on an overridden
           field to see the documented rationale.
         </p>
+        {schema.journeySourceField ? (
+          <p className="mt-2 text-sm">
+            <Link to={`/triage?schemaId=${schema.id}`} className="text-indigo-600 hover:underline">
+              View this schema's journey on the triage map →
+            </Link>{" "}
+            <span className="text-xs text-slate-400">
+              (derived from the "{schema.journeySourceField}" field)
+            </span>
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-slate-400">
+            No triage journey for this schema — add a select field with 2–8 options (e.g. named
+            "Status") and recreate it to get one automatically.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-6 md:grid-cols-2">

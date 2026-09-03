@@ -31,8 +31,15 @@ This is a working MVP scoped to the brief's Section 9 minimum viable build:
   selection plus a research reference and a product justification before an override can save.
   Overridden fields show a "customised — see rationale" badge visible to everyone.
 - **The triage map** — a visual case pathway with per-stage volume and wait time, a flag on the
-  worst-performing stage, and a click-through panel explaining why (based on the illustrative
-  example in the brief: an unassigned queue, not compliance review, is the real bottleneck).
+  worst-performing stage, and a click-through panel explaining why. Every schema gets its **own**
+  journey automatically: whichever schema field looks like a status (named `status`/`stage`/
+  `state`, or the first select-type field with 2–8 options) has its options turned straight into
+  pipeline stages the moment the schema is created — the brief's "the same schema that builds the
+  form also powers the triage map" principle, literally. The demo schema keeps the brief's own
+  illustrative pipeline (Front Office → Compliance Review → Unassigned Queue → ... ), which was
+  seeded directly rather than derived; anything you build/upload gets a freshly derived one. A
+  schema selector on the Triage Map page (and a "View journey" link on each form) lets you switch
+  between them.
 - **Audit log** — every schema creation and every override, with who, when, and why.
 - **Data & Security page** — the data-light architecture / "compliant by design now,
   certifiable later" posture from the brief, written out for users.

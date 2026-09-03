@@ -4,6 +4,7 @@ import XLSX from "xlsx";
 import { nanoid } from "nanoid";
 import { db } from "../db.js";
 import { resolveSchemaFields } from "../rulesEngine.js";
+import { deriveTriageStages } from "../deriveJourney.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -49,13 +50,26 @@ function persistSchema({ name, sourceType, rawFields, userId, userName }) {
   const schemaId = nanoid();
   const now = new Date().toISOString();
 
-  data.schemas.push({ id: schemaId, name, sourceType, createdBy: userId, createdAt: now, updatedAt: now });
-
   const resolved = resolveSchemaFields(rawFields);
   const savedFields = resolved.map((field, index) => {
     const record = { id: nanoid(), schemaId, order: index, ...field };
     data.fields.push(record);
     return record;
+  });
+
+  // The same schema that builds the form also powers the triage map: a
+  // status-like field's options become the case journey's stages.
+  const { stages, sourceField } = deriveTriageStages(schemaId, savedFields);
+  data.triageStages.push(...stages);
+
+  data.schemas.push({
+    id: schemaId,
+    name,
+    sourceType,
+    createdBy: userId,
+    createdAt: now,
+    updatedAt: now,
+    journeySourceField: sourceField,
   });
 
   data.auditLog.push({
@@ -65,12 +79,22 @@ function persistSchema({ name, sourceType, rawFields, userId, userName }) {
     action: "schema.created",
     entityType: "schema",
     entityId: schemaId,
-    details: { name, sourceType, fieldCount: savedFields.length },
+    details: {
+      name,
+      sourceType,
+      fieldCount: savedFields.length,
+      journeyDerivedFrom: sourceField,
+      journeyStageCount: stages.length,
+    },
     createdAt: now,
   });
 
   db.persist();
-  return { schema: data.schemas.find((s) => s.id === schemaId), fields: savedFields };
+  return {
+    schema: data.schemas.find((s) => s.id === schemaId),
+    fields: savedFields,
+    journey: { derived: stages.length > 0, sourceField, stageCount: stages.length },
+  };
 }
 
 router.use(requireAuth);
@@ -80,6 +104,7 @@ router.get("/", (_req, res) => {
   const schemas = data.schemas.map((s) => ({
     ...s,
     fieldCount: data.fields.filter((f) => f.schemaId === s.id).length,
+    hasJourney: data.triageStages.some((t) => t.schemaId === s.id),
   }));
   res.json({ schemas });
 });
