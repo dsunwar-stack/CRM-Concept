@@ -1,0 +1,24 @@
+{
+  "name": "caseflow-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Caseflow API — schema-driven case management form generator and triage map",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
+    "nanoid": "^5.0.7",
+    "xlsx": "^0.18.5"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  }
+}

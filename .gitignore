@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+
+# Runtime data store (server/data/store.json is created and seeded on first run)
+server/data/store.json
