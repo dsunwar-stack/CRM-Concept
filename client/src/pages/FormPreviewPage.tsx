@@ -35,57 +35,78 @@ export default function FormPreviewPage() {
     setOverrideTarget(null);
   }
 
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-  if (!schema) return <p className="text-sm text-slate-400">Loading…</p>;
+  if (error) return <p className="slds-text-color_error slds-text-body_small">{error}</p>;
+  if (!schema) return <p className="slds-text-color_weak slds-text-body_small">Loading…</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="slds-grid slds-grid_vertical slds-gutters_direct-y">
       <div>
-        <Link to="/" className="text-sm text-indigo-600 hover:underline">
+        <Link to="/" className="slds-text-body_small">
           ← All schemas
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">{schema.name}</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Generated automatically from a {schema.sourceType.toUpperCase()} schema. Every component
-          below was chosen by the rules engine — hover the “customised” badge on an overridden
-          field to see the documented rationale.
-        </p>
+        <div className="slds-page-header slds-m-top_x-small">
+          <div className="slds-page-header__row">
+            <div className="slds-page-header__col-title">
+              <div className="slds-media">
+                <div className="slds-media__body">
+                  <div className="slds-page-header__name">
+                    <div className="slds-page-header__name-title">
+                      <h1>
+                        <span className="slds-page-header__title slds-truncate">{schema.name}</span>
+                      </h1>
+                    </div>
+                  </div>
+                  <p className="slds-page-header__name-meta">
+                    Generated automatically from a {schema.sourceType.toUpperCase()} schema. Every
+                    component below was chosen by the rules engine — hover the "customised" badge on
+                    an overridden field to see the documented rationale.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         {schema.journeySourceField ? (
-          <p className="mt-2 text-sm">
-            <Link to={`/triage?schemaId=${schema.id}`} className="text-indigo-600 hover:underline">
-              View this schema's journey on the triage map →
-            </Link>{" "}
-            <span className="text-xs text-slate-400">
+          <p className="slds-text-body_small slds-m-top_x-small">
+            <Link to={`/triage?schemaId=${schema.id}`}>View this schema's journey on the triage map →</Link>{" "}
+            <span className="slds-text-body_small slds-text-color_weak">
               (derived from the "{schema.journeySourceField}" field)
             </span>
           </p>
         ) : (
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="slds-text-body_small slds-text-color_weak slds-m-top_x-small">
             No triage journey for this schema — add a select field with 2–8 options (e.g. named
             "Status") and recreate it to get one automatically.
           </p>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-6 md:grid-cols-2">
-        {fields.map((field) => (
-          <DynamicField
-            key={field.id}
-            field={field}
-            onOverrideClick={setOverrideTarget}
-            onRevertOverride={revertOverride}
-          />
-        ))}
-      </div>
+      <article className="slds-card">
+        <div className="slds-card__body slds-card__body_inner">
+          <div className="slds-grid slds-gutters slds-wrap">
+            {fields.map((field) => (
+              <div key={field.id} className="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_small">
+                <DynamicField
+                  field={field}
+                  onOverrideClick={setOverrideTarget}
+                  onRevertOverride={revertOverride}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </article>
 
-      <details className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
-        <summary className="cursor-pointer font-medium text-slate-700">
+      <details className="slds-card slds-p-around_medium">
+        <summary className="slds-text-heading_small" style={{ cursor: "pointer" }}>
           Rules-engine reasoning for this schema
         </summary>
-        <ul className="mt-3 space-y-2">
+        <ul className="slds-list_vertical-space slds-m-top_small">
           {fields.map((f) => (
-            <li key={f.id} className="text-slate-600">
-              <span className="font-medium text-slate-800">{f.fieldName}:</span>{" "}
+            <li key={f.id} className="slds-text-body_small slds-text-color_weak">
+              <span className="slds-text-color_default" style={{ fontWeight: 600 }}>
+                {f.fieldName}:
+              </span>{" "}
               {f.activeOverride ? (
                 <>
                   overridden to {f.activeOverride.component} — {f.activeOverride.heuristic}

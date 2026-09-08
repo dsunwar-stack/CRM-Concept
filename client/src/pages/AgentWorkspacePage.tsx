@@ -112,235 +112,277 @@ export default function AgentWorkspacePage() {
   const progress = caseType ? Math.round((completedTasks.size / caseType.roadmap.length) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="slds-grid slds-grid_vertical slds-gutters_direct-y">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">AI Case Assistant</h1>
-        <p className="mt-1 max-w-3xl text-sm text-slate-500">
+        <h1 className="slds-text-heading_medium">AI Case Assistant</h1>
+        <p className="slds-text-body_small slds-text-color_weak slds-m-top_xx-small" style={{ maxWidth: 720 }}>
           One screen for the call, chat, or email that just came in — AI summarises it, suggests the
           case category, lays out the roadmap to resolve it, flags fraud risk, and can help draft the
           reply. No more switching between the phone/chat tool and a separate how-to guide.
         </p>
-        <p className="mt-2 text-xs text-amber-600">
-          Prototype note: calls a real Claude model on the backend when the server has
-          <code className="mx-1 rounded bg-amber-50 px-1 py-0.5">ANTHROPIC_API_KEY</code> set (see
-          <code className="mx-1 rounded bg-amber-50 px-1 py-0.5">server/.env.example</code>) — and
-          automatically falls back to a scripted, keyword-based simulation in{" "}
-          <code className="rounded bg-amber-50 px-1 py-0.5">client/src/lib/simulatedAI.ts</code>{" "}
+        <p className="slds-text-body_small slds-m-top_x-small" style={{ color: "var(--slds-g-color-warning-base-30, #92400e)" }}>
+          Prototype note: calls a real Claude model on the backend when the server has{" "}
+          <code className="slds-badge slds-badge_lightest slds-m-horizontal_xx-small">ANTHROPIC_API_KEY</code> set
+          (see <code className="slds-badge slds-badge_lightest slds-m-horizontal_xx-small">server/.env.example</code>) —
+          and automatically falls back to a scripted, keyword-based simulation in{" "}
+          <code className="slds-badge slds-badge_lightest slds-m-horizontal_xx-small">
+            client/src/lib/simulatedAI.ts
+          </code>{" "}
           otherwise, so the flow always works without a key.
         </p>
         {aiNotice && (
-          <p className="mt-2 rounded-md bg-slate-100 px-3 py-2 text-xs text-slate-600">{aiNotice}</p>
+          <div className="slds-notify slds-notify_alert slds-theme_shade slds-m-top_x-small">
+            <p className="slds-text-body_small">{aiNotice}</p>
+          </div>
         )}
       </div>
 
       {/* Step 0 — intake */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Incoming interaction
-          </h2>
-          <div className="flex gap-1 rounded-md bg-slate-100 p-1">
-            {(["call", "chat", "email"] as Channel[]).map((c) => (
-              <button
-                key={c}
-                onClick={() => setChannel(c)}
-                className={`rounded px-3 py-1 text-xs font-medium ${
-                  channel === c ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
-                }`}
-              >
-                {CHANNEL_LABELS[c]}
-              </button>
+      <article className="slds-card">
+        <div className="slds-card__body slds-card__body_inner">
+          <div className="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-wrap">
+            <h2 className="slds-text-title_caps slds-text-color_weak">Incoming interaction</h2>
+            <div className="slds-radio_button-group" role="radiogroup" aria-label="Channel">
+              {(["call", "chat", "email"] as Channel[]).map((c) => (
+                <span key={c} className="slds-button slds-radio_button">
+                  <input
+                    type="radio"
+                    id={`channel-${c}`}
+                    name="channel"
+                    checked={channel === c}
+                    onChange={() => setChannel(c)}
+                  />
+                  <label className="slds-radio_button__label" htmlFor={`channel-${c}`}>
+                    <span className="slds-radio_faux">{CHANNEL_LABELS[c]}</span>
+                  </label>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="slds-grid slds-wrap slds-gutters_x-small slds-m-top_small">
+            {SAMPLE_TRANSCRIPTS.map((s) => (
+              <div className="slds-col slds-no-flex slds-m-bottom_x-small" key={s.label}>
+                <button
+                  onClick={() => loadSample(s)}
+                  className="slds-button slds-button_neutral slds-button_small"
+                >
+                  Load example: {s.label}
+                </button>
+              </div>
             ))}
           </div>
+
+          <div className="slds-form-element slds-m-top_small">
+            <div className="slds-form-element__control">
+              <textarea
+                value={transcript}
+                onChange={(e) => {
+                  setTranscript(e.target.value);
+                  resetDownstream();
+                }}
+                rows={4}
+                placeholder={`Paste or type the ${CHANNEL_LABELS[channel].toLowerCase()} transcript / message here…`}
+                className="slds-textarea"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={runAnalysis}
+            disabled={!transcript.trim() || isAnalyzing}
+            className="slds-button slds-button_brand slds-m-top_small"
+          >
+            {isAnalyzing ? "Analysing…" : "Analyse with AI"}
+          </button>
         </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {SAMPLE_TRANSCRIPTS.map((s) => (
-            <button
-              key={s.label}
-              onClick={() => loadSample(s)}
-              className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
-            >
-              Load example: {s.label}
-            </button>
-          ))}
-        </div>
-
-        <textarea
-          value={transcript}
-          onChange={(e) => {
-            setTranscript(e.target.value);
-            resetDownstream();
-          }}
-          rows={4}
-          placeholder={`Paste or type the ${CHANNEL_LABELS[channel].toLowerCase()} transcript / message here…`}
-          className="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        />
-
-        <button
-          onClick={runAnalysis}
-          disabled={!transcript.trim() || isAnalyzing}
-          className="mt-3 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {isAnalyzing ? "Analysing…" : "Analyse with AI"}
-        </button>
-      </div>
+      </article>
 
       {analysis && caseType && (
         <>
           {/* Step 1 — summary + category */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Step 1 · Summary &amp; categorisation
-              <SourceBadge source={analysisSource} />
-            </h2>
-            <p className="mt-2 text-sm text-slate-700">{analysis.summary}</p>
+          <article className="slds-card">
+            <div className="slds-card__body slds-card__body_inner">
+              <h2 className="slds-text-title_caps slds-text-color_weak slds-grid slds-grid_vertical-align-center">
+                Step 1 · Summary &amp; categorisation
+                <SourceBadge source={analysisSource} />
+              </h2>
+              <p className="slds-text-body_regular slds-m-top_x-small">{analysis.summary}</p>
 
-            {analysis.clarifyingQuestions.length > 0 && (
-              <div className="mt-3 rounded-md bg-slate-50 p-3">
-                <p className="text-xs font-semibold text-slate-500">AI suggests asking the customer:</p>
-                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-600">
-                  {analysis.clarifyingQuestions.map((q) => (
-                    <li key={q}>{q}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              {analysis.clarifyingQuestions.length > 0 && (
+                <div className="slds-box slds-theme_shade slds-m-top_small">
+                  <p className="slds-text-title_caps slds-text-color_weak">AI suggests asking the customer:</p>
+                  <ul className="slds-list_dotted slds-m-top_x-small">
+                    {analysis.clarifyingQuestions.map((q) => (
+                      <li key={q} className="slds-text-body_small">
+                        {q}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-            <div className="mt-4">
-              <p className="mb-2 text-sm font-medium text-slate-700">
-                Case category{" "}
-                <span className="ml-1 text-xs font-normal text-slate-400">
-                  (AI-suggested — 5 options, so it renders as radio buttons per the rules engine;
-                  confirm or change it)
-                </span>
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {CASE_TYPES.map((ct) => (
-                  <label
-                    key={ct.id}
-                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
-                      selectedCaseTypeId === ct.id
-                        ? "border-indigo-400 bg-indigo-50 text-indigo-800"
-                        : "border-slate-200 text-slate-600"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="case-type"
-                      checked={selectedCaseTypeId === ct.id}
-                      onChange={() => {
-                        setSelectedCaseTypeId(ct.id);
-                        setCompletedTasks(new Set());
-                        setRoutedToFraudQueue(false);
-                      }}
-                    />
-                    {ct.label}
-                    {ct.id === analysis.suggestedCaseTypeId && (
-                      <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
-                        AI pick
+              <div className="slds-m-top_medium">
+                <p className="slds-form-element__label slds-m-bottom_x-small">
+                  Case category{" "}
+                  <span className="slds-text-body_small slds-text-color_weak">
+                    (AI-suggested — 5 options, so it renders as radio buttons per the rules engine;
+                    confirm or change it)
+                  </span>
+                </p>
+                <div className="slds-grid slds-wrap slds-gutters_x-small">
+                  {CASE_TYPES.map((ct) => (
+                    <div className="slds-col slds-no-flex slds-m-bottom_x-small" key={ct.id}>
+                      <span className="slds-radio">
+                        <input
+                          type="radio"
+                          id={`case-type-${ct.id}`}
+                          name="case-type"
+                          checked={selectedCaseTypeId === ct.id}
+                          onChange={() => {
+                            setSelectedCaseTypeId(ct.id);
+                            setCompletedTasks(new Set());
+                            setRoutedToFraudQueue(false);
+                          }}
+                        />
+                        <label
+                          className={`slds-radio__label slds-box slds-box_x-small slds-p-horizontal_small ${
+                            selectedCaseTypeId === ct.id ? "slds-theme_shade" : ""
+                          }`}
+                          htmlFor={`case-type-${ct.id}`}
+                        >
+                          <span className="slds-radio_faux" />
+                          <span className="slds-form-element__label">
+                            {ct.label}
+                            {ct.id === analysis.suggestedCaseTypeId && (
+                              <span className="slds-badge slds-badge_lightest slds-m-left_x-small">AI pick</span>
+                            )}
+                          </span>
+                        </label>
                       </span>
-                    )}
-                  </label>
-                ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          </article>
 
           {/* Fraud signal */}
           {caseType.isFraudRisk && (
-            <div className="rounded-xl border border-red-300 bg-red-50 p-6">
-              <p className="text-sm font-semibold text-red-800">⚠ Fraud signal detected</p>
-              <p className="mt-1 text-sm text-red-700">
-                This case matches patterns associated with unauthorised transactions. Recommended:
-                route to the Fraud queue and freeze the affected card before continuing.
-              </p>
-              {routedToFraudQueue ? (
-                <p className="mt-3 text-sm font-medium text-red-800">
-                  ✓ Routed to Fraud queue and logged.
+            <article className="slds-card">
+              <div className="slds-card__body slds-card__body_inner slds-theme_error">
+                <p className="slds-text-heading_small">⚠ Fraud signal detected</p>
+                <p className="slds-text-body_small slds-m-top_xx-small">
+                  This case matches patterns associated with unauthorised transactions. Recommended:
+                  route to the Fraud queue and freeze the affected card before continuing.
                 </p>
-              ) : (
-                <button
-                  onClick={() => setRoutedToFraudQueue(true)}
-                  className="mt-3 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-                >
-                  Route to Fraud queue
-                </button>
-              )}
-            </div>
+                {routedToFraudQueue ? (
+                  <p className="slds-text-body_regular slds-m-top_small" style={{ fontWeight: 600 }}>
+                    ✓ Routed to Fraud queue and logged.
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setRoutedToFraudQueue(true)}
+                    className="slds-button slds-button_destructive slds-m-top_small"
+                  >
+                    Route to Fraud queue
+                  </button>
+                )}
+              </div>
+            </article>
           )}
 
           {/* Step 2 — roadmap */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Step 2 &amp; 3 · Roadmap to resolution
-              </h2>
-              <span className="text-xs text-slate-500">{progress}% complete</span>
+          <article className="slds-card">
+            <div className="slds-card__body slds-card__body_inner">
+              <div className="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                <h2 className="slds-text-title_caps slds-text-color_weak">Step 2 &amp; 3 · Roadmap to resolution</h2>
+                <span className="slds-text-body_small slds-text-color_weak">{progress}% complete</span>
+              </div>
+              <div className="slds-progress-bar slds-progress-bar_small slds-m-top_x-small" aria-valuenow={progress}>
+                <span className="slds-progress-bar__value" style={{ width: `${progress}%` }}>
+                  <span className="slds-assistive-text">Progress: {progress}%</span>
+                </span>
+              </div>
+              <ul className="slds-m-top_medium">
+                {caseType.roadmap.map((task, i) => (
+                  <li key={task} className="slds-grid slds-p-vertical_xx-small">
+                    <span className="slds-checkbox">
+                      <input
+                        type="checkbox"
+                        id={`task-${i}`}
+                        checked={completedTasks.has(task)}
+                        onChange={() => toggleTask(task)}
+                      />
+                      <label className="slds-checkbox__label" htmlFor={`task-${i}`}>
+                        <span className="slds-checkbox_faux" />
+                        <span
+                          className={`slds-form-element__label slds-text-body_regular ${
+                            completedTasks.has(task) ? "slds-text-color_weak" : ""
+                          }`}
+                          style={completedTasks.has(task) ? { textDecoration: "line-through" } : undefined}
+                        >
+                          {i + 1}. {task}
+                        </span>
+                      </label>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-indigo-600 transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <ul className="mt-4 space-y-2">
-              {caseType.roadmap.map((task, i) => (
-                <li key={task} className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    checked={completedTasks.has(task)}
-                    onChange={() => toggleTask(task)}
-                    className="mt-0.5"
-                  />
-                  <span
-                    className={`text-sm ${
-                      completedTasks.has(task) ? "text-slate-400 line-through" : "text-slate-700"
-                    }`}
-                  >
-                    {i + 1}. {task}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          </article>
 
           {/* Draft assist */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Draft a reply
-              <SourceBadge source={draftSource} />
-            </h2>
-            <div className="mt-3 flex items-center gap-2">
-              {(["empathetic", "formal", "concise"] as Tone[]).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTone(t)}
-                  className={`rounded-full border px-3 py-1 text-xs capitalize ${
-                    tone === t
-                      ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                      : "border-slate-200 text-slate-600"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-              <button
-                onClick={generateDraft}
-                disabled={isDrafting}
-                className="ml-2 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {isDrafting ? "Writing…" : draft ? "Regenerate" : "Generate draft"}
-              </button>
+          <article className="slds-card">
+            <div className="slds-card__body slds-card__body_inner">
+              <h2 className="slds-text-title_caps slds-text-color_weak slds-grid slds-grid_vertical-align-center">
+                Draft a reply
+                <SourceBadge source={draftSource} />
+              </h2>
+              <div className="slds-grid slds-grid_vertical-align-center slds-gutters_x-small slds-m-top_small slds-wrap">
+                <div className="slds-col slds-no-flex">
+                  <div className="slds-radio_button-group" role="radiogroup" aria-label="Tone">
+                    {(["empathetic", "formal", "concise"] as Tone[]).map((t) => (
+                      <span key={t} className="slds-button slds-radio_button">
+                        <input
+                          type="radio"
+                          id={`tone-${t}`}
+                          name="tone"
+                          checked={tone === t}
+                          onChange={() => setTone(t)}
+                        />
+                        <label className="slds-radio_button__label" htmlFor={`tone-${t}`}>
+                          <span className="slds-radio_faux" style={{ textTransform: "capitalize" }}>
+                            {t}
+                          </span>
+                        </label>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="slds-col slds-no-flex">
+                  <button
+                    onClick={generateDraft}
+                    disabled={isDrafting}
+                    className="slds-button slds-button_brand slds-button_small"
+                  >
+                    {isDrafting ? "Writing…" : draft ? "Regenerate" : "Generate draft"}
+                  </button>
+                </div>
+              </div>
+              <div className="slds-form-element slds-m-top_small">
+                <div className="slds-form-element__control">
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    rows={6}
+                    placeholder="AI-drafted reply will appear here — fully editable before you send."
+                    className="slds-textarea"
+                  />
+                </div>
+              </div>
             </div>
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              rows={6}
-              placeholder="AI-drafted reply will appear here — fully editable before you send."
-              className="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-            />
-          </div>
+          </article>
         </>
       )}
     </div>
@@ -350,11 +392,11 @@ export default function AgentWorkspacePage() {
 function SourceBadge({ source }: { source: "real" | "simulated" | null }) {
   if (!source) return null;
   return source === "real" ? (
-    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-700">
+    <span className="slds-badge slds-theme_success slds-m-left_x-small" style={{ textTransform: "none" }}>
       Claude Opus 5
     </span>
   ) : (
-    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-slate-600">
+    <span className="slds-badge slds-badge_lightest slds-m-left_x-small" style={{ textTransform: "none" }}>
       simulated
     </span>
   );

@@ -16,59 +16,61 @@ export default function AuditLogPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="slds-grid slds-grid_vertical slds-gutters_direct-y">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Audit log</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="slds-text-heading_medium">Audit log</h1>
+        <p className="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
           Every schema creation and every expert override, with who made it, when, and why —
           nothing here is a silent, unexplained change.
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-4 py-3">When</th>
-              <th className="px-4 py-3">Who</th>
-              <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Details</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {log === null && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                  Loading…
-                </td>
-              </tr>
-            )}
-            {log?.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                  Nothing logged yet.
-                </td>
-              </tr>
-            )}
-            {log?.map((entry) => (
-              <tr key={entry.id} className="align-top hover:bg-slate-50">
-                <td className="whitespace-nowrap px-4 py-3 text-slate-500">
-                  {new Date(entry.createdAt).toLocaleString()}
-                </td>
-                <td className="px-4 py-3 font-medium text-slate-800">{entry.actorName}</td>
-                <td className="px-4 py-3 text-slate-700">
-                  {ACTION_LABELS[entry.action] ?? entry.action}
-                </td>
-                <td className="px-4 py-3 text-slate-500">
-                  <pre className="whitespace-pre-wrap font-mono text-xs">
-                    {JSON.stringify(entry.details, null, 0)}
-                  </pre>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <article className="slds-card">
+        <div className="slds-card__body slds-card__body_inner">
+          <div style={{ overflowX: "auto" }}>
+            <table className="slds-table slds-table_bordered slds-table_cell-buffer">
+              <thead>
+                <tr className="slds-line-height_reset">
+                  <th scope="col">When</th>
+                  <th scope="col">Who</th>
+                  <th scope="col">Action</th>
+                  <th scope="col">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {log === null && (
+                  <tr>
+                    <td colSpan={4} className="slds-text-align_center slds-text-color_weak">
+                      Loading…
+                    </td>
+                  </tr>
+                )}
+                {log?.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="slds-text-align_center slds-text-color_weak">
+                      Nothing logged yet.
+                    </td>
+                  </tr>
+                )}
+                {log?.map((entry) => (
+                  <tr key={entry.id}>
+                    <td className="slds-text-color_weak slds-nowrap">
+                      {new Date(entry.createdAt).toLocaleString()}
+                    </td>
+                    <td style={{ fontWeight: 600 }}>{entry.actorName}</td>
+                    <td>{ACTION_LABELS[entry.action] ?? entry.action}</td>
+                    <td className="slds-text-color_weak">
+                      <pre className="slds-text-body_small" style={{ whiteSpace: "pre-wrap", fontFamily: "monospace", margin: 0 }}>
+                        {JSON.stringify(entry.details, null, 0)}
+                      </pre>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
     </div>
   );
 }
