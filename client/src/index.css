@@ -1,12 +1,16 @@
-@import "tailwindcss";
+@import "@salesforce-ux/design-system-2/dist/css/bundled/slds2.lightning-blue.css";
 
 :root {
   color-scheme: light;
 }
 
+html,
 body {
   margin: 0;
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
-  background-color: #f6f7f9;
-  color: #16181d;
+  min-height: 100%;
+  background: var(--slds-g-color-neutral-base-95);
+}
+
+#root {
+  min-height: 100vh;
 }
