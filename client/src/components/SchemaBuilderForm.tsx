@@ -102,19 +102,24 @@ export default function SchemaBuilderForm({ onCreated }: { onCreated: () => void
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Schema name</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          placeholder="Customer Onboarding Case"
-        />
+    <form onSubmit={handleSubmit} className="slds-m-top_medium">
+      <div className="slds-form-element slds-m-bottom_medium">
+        <label className="slds-form-element__label" htmlFor="schema-name">
+          Schema name
+        </label>
+        <div className="slds-form-element__control">
+          <input
+            id="schema-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="slds-input"
+            placeholder="Customer Onboarding Case"
+          />
+        </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="slds-grid slds-grid_vertical slds-gutters_direct-y">
         {fields.map((field, index) => {
           const optionsList = field.optionsListText
             .split(",")
@@ -132,95 +137,124 @@ export default function SchemaBuilderForm({ onCreated }: { onCreated: () => void
           );
 
           return (
-            <div key={field.key} className="rounded-lg border border-slate-200 p-3">
-              <div className="flex items-start gap-2">
-                <span className="mt-2 text-xs text-slate-400">{index + 1}.</span>
-                <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-[2fr_1.2fr_auto]">
-                  <input
-                    type="text"
-                    value={field.fieldName}
-                    onChange={(e) => updateField(field.key, { fieldName: e.target.value })}
-                    placeholder="Field name (e.g. Case Status)"
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  />
-                  <select
-                    value={field.type}
-                    onChange={(e) => updateField(field.key, { type: e.target.value as FieldType })}
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  >
-                    {(Object.keys(TYPE_LABELS) as FieldType[]).map((t) => (
-                      <option key={t} value={t}>
-                        {TYPE_LABELS[t]}
-                      </option>
-                    ))}
-                  </select>
-                  <label className="flex items-center gap-1.5 whitespace-nowrap px-1 text-xs text-slate-600">
+            <div key={field.key} className="slds-box slds-box_x-small">
+              <div className="slds-grid slds-gutters_x-small slds-grid_vertical-align-start">
+                <span className="slds-col slds-no-flex slds-text-body_small slds-text-color_weak slds-p-top_xx-small">
+                  {index + 1}.
+                </span>
+                <div className="slds-col slds-grid slds-wrap slds-gutters_x-small">
+                  <div className="slds-col slds-size_1-of-1 slds-medium-size_5-of-12">
                     <input
-                      type="checkbox"
-                      checked={field.required}
-                      onChange={(e) => updateField(field.key, { required: e.target.checked })}
+                      type="text"
+                      value={field.fieldName}
+                      onChange={(e) => updateField(field.key, { fieldName: e.target.value })}
+                      placeholder="Field name (e.g. Case Status)"
+                      className="slds-input"
                     />
-                    Required
-                  </label>
+                  </div>
+                  <div className="slds-col slds-size_1-of-1 slds-medium-size_4-of-12">
+                    <div className="slds-select_container">
+                      <select
+                        value={field.type}
+                        onChange={(e) => updateField(field.key, { type: e.target.value as FieldType })}
+                        className="slds-select"
+                      >
+                        {(Object.keys(TYPE_LABELS) as FieldType[]).map((t) => (
+                          <option key={t} value={t}>
+                            {TYPE_LABELS[t]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-p-top_x-small">
+                    <span className="slds-checkbox">
+                      <input
+                        type="checkbox"
+                        id={`required-${field.key}`}
+                        checked={field.required}
+                        onChange={(e) => updateField(field.key, { required: e.target.checked })}
+                      />
+                      <label className="slds-checkbox__label" htmlFor={`required-${field.key}`}>
+                        <span className="slds-checkbox_faux" />
+                        <span className="slds-form-element__label">Required</span>
+                      </label>
+                    </span>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeField(field.key)}
-                  disabled={fields.length === 1}
-                  className="mt-1 shrink-0 text-xs text-slate-400 hover:text-red-600 disabled:opacity-30"
-                  title="Remove field"
-                >
-                  ✕
-                </button>
+                <div className="slds-col slds-no-flex">
+                  <button
+                    type="button"
+                    onClick={() => removeField(field.key)}
+                    disabled={fields.length === 1}
+                    className="slds-button slds-button_icon slds-button_icon-border-filled"
+                    title="Remove field"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
               {field.type === "select" && (
-                <div className="ml-5 mt-2">
+                <div className="slds-m-top_x-small" style={{ marginLeft: 24 }}>
                   <input
                     type="text"
                     value={field.optionsListText}
                     onChange={(e) => updateField(field.key, { optionsListText: e.target.value })}
                     placeholder="Comma-separated options, e.g. Open, In Review, Escalated, Closed"
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="slds-input"
                   />
                 </div>
               )}
 
               {field.type === "number" && (
-                <div className="ml-5 mt-2 flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={field.min}
-                    onChange={(e) => updateField(field.key, { min: e.target.value })}
-                    placeholder="Min (optional)"
-                    className="w-28 rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  />
-                  <input
-                    type="number"
-                    value={field.max}
-                    onChange={(e) => updateField(field.key, { max: e.target.value })}
-                    placeholder="Max (optional)"
-                    className="w-28 rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  />
-                  <span className="text-xs text-slate-400">
+                <div className="slds-grid slds-gutters_x-small slds-grid_vertical-align-center slds-m-top_x-small" style={{ marginLeft: 24 }}>
+                  <div className="slds-col slds-no-flex" style={{ width: 120 }}>
+                    <input
+                      type="number"
+                      value={field.min}
+                      onChange={(e) => updateField(field.key, { min: e.target.value })}
+                      placeholder="Min (optional)"
+                      className="slds-input"
+                    />
+                  </div>
+                  <div className="slds-col slds-no-flex" style={{ width: 120 }}>
+                    <input
+                      type="number"
+                      value={field.max}
+                      onChange={(e) => updateField(field.key, { max: e.target.value })}
+                      placeholder="Max (optional)"
+                      className="slds-input"
+                    />
+                  </div>
+                  <span className="slds-col slds-text-body_small slds-text-color_weak">
                     small known range → stepper/slider; otherwise plain text input
                   </span>
                 </div>
               )}
 
               {field.type === "text" && (
-                <label className="ml-5 mt-2 flex items-center gap-1.5 text-xs text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={field.expectLongText}
-                    onChange={(e) => updateField(field.key, { expectLongText: e.target.checked })}
-                  />
-                  Expect long input (over ~100 characters)
-                </label>
+                <div className="slds-m-top_x-small" style={{ marginLeft: 24 }}>
+                  <span className="slds-checkbox">
+                    <input
+                      type="checkbox"
+                      id={`longtext-${field.key}`}
+                      checked={field.expectLongText}
+                      onChange={(e) => updateField(field.key, { expectLongText: e.target.checked })}
+                    />
+                    <label className="slds-checkbox__label" htmlFor={`longtext-${field.key}`}>
+                      <span className="slds-checkbox_faux" />
+                      <span className="slds-form-element__label">Expect long input (over ~100 characters)</span>
+                    </label>
+                  </span>
+                </div>
               )}
 
-              <div className="ml-5 mt-2 text-xs text-slate-400">
-                Rules-engine preview: <span className="font-medium text-slate-600">{COMPONENT_LABELS[component]}</span>
+              <div className="slds-text-body_small slds-text-color_weak slds-m-top_x-small" style={{ marginLeft: 24 }}>
+                Rules-engine preview:{" "}
+                <span className="slds-text-color_default" style={{ fontWeight: 600 }}>
+                  {COMPONENT_LABELS[component]}
+                </span>
                 {field.type === "select" && optionsList.length > 0 && ` (${optionsList.length} options)`}
               </div>
             </div>
@@ -228,22 +262,14 @@ export default function SchemaBuilderForm({ onCreated }: { onCreated: () => void
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={addField}
-        className="rounded-md border border-dashed border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-700"
-      >
+      <button type="button" onClick={addField} className="slds-button slds-button_neutral slds-m-top_small">
         + Add field
       </button>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="slds-text-color_error slds-text-body_small slds-m-top_small">{error}</p>}
 
-      <div>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+      <div className="slds-m-top_medium">
+        <button type="submit" disabled={submitting} className="slds-button slds-button_brand">
           {submitting ? "Generating…" : "Create form"}
         </button>
       </div>

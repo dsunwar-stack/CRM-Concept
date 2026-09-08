@@ -67,90 +67,126 @@ export default function SchemaUploadPanel({ onCreated }: { onCreated: () => void
     }
   }
 
+  const TAB_LABELS: Record<Tab, string> = {
+    build: "Build a form",
+    excel: "Excel upload (.xlsx)",
+    json: "JSON import",
+  };
+
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6">
-      <h2 className="text-lg font-semibold text-slate-900">Generate a new form from a schema</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Build one field-by-field here, upload an Excel sheet (the primary path most PMs and
-        analysts already work in), or import JSON directly for technical/system integration use.
-      </p>
-
-      <div className="mt-4 flex gap-1 border-b border-slate-200">
-        {(["build", "excel", "json"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium ${
-              tab === t
-                ? "border-b-2 border-indigo-600 text-indigo-700"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            {t === "build" ? "Build a form" : t === "excel" ? "Excel upload (.xlsx)" : "JSON import"}
-          </button>
-        ))}
+    <article className="slds-card">
+      <div className="slds-card__header slds-grid">
+        <header className="slds-media slds-media_center slds-has-flexi-truncate">
+          <div className="slds-media__body">
+            <h2 className="slds-card__header-title">Generate a new form from a schema</h2>
+          </div>
+        </header>
       </div>
+      <div className="slds-card__body slds-card__body_inner">
+        <p className="slds-text-body_small slds-text-color_weak">
+          Build one field-by-field here, upload an Excel sheet (the primary path most PMs and
+          analysts already work in), or import JSON directly for technical/system integration use.
+        </p>
 
-      {tab === "build" ? (
-        <SchemaBuilderForm onCreated={onCreated} />
-      ) : tab === "excel" ? (
-        <form onSubmit={submitExcel} className="mt-4 space-y-3">
-          <p className="text-xs text-slate-500">
-            Expected columns: <code>Field Name</code>, <code>Type</code>{" "}
-            (select / text / longtext / date / boolean / number), <code>Options Count</code>,{" "}
-            <code>Required</code>, <code>Options List</code> (comma-separated).
-          </p>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              Schema name (optional — defaults to the file name)
-            </label>
-            <input
-              type="text"
-              value={excelName}
-              onChange={(e) => setExcelName(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Customer Onboarding Case"
-            />
-          </div>
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(e) => setFileLabel(e.target.files?.[0]?.name ?? null)}
-              className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100"
-            />
-            {fileLabel && <p className="mt-1 text-xs text-slate-500">Selected: {fileLabel}</p>}
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {submitting ? "Generating…" : "Upload & generate form"}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={submitJson} className="mt-4 space-y-3">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Schema JSON</label>
-          <textarea
-            value={jsonText}
-            onChange={(e) => setJsonText(e.target.value)}
-            rows={12}
-            spellCheck={false}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-xs"
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {submitting ? "Generating…" : "Import & generate form"}
-          </button>
-        </form>
-      )}
-    </div>
+        <div className="slds-tabs_default slds-m-top_small">
+          <ul className="slds-tabs_default__nav" role="tablist">
+            {(["build", "excel", "json"] as Tab[]).map((t) => (
+              <li
+                key={t}
+                className={`slds-tabs_default__item ${tab === t ? "slds-is-active" : ""}`}
+                role="presentation"
+              >
+                <button
+                  type="button"
+                  className="slds-tabs_default__link"
+                  role="tab"
+                  aria-selected={tab === t}
+                  onClick={() => setTab(t)}
+                >
+                  {TAB_LABELS[t]}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {tab === "build" ? (
+          <SchemaBuilderForm onCreated={onCreated} />
+        ) : tab === "excel" ? (
+          <form onSubmit={submitExcel} className="slds-m-top_medium">
+            <p className="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+              Expected columns: <code>Field Name</code>, <code>Type</code> (select / text /
+              longtext / date / boolean / number), <code>Options Count</code>,{" "}
+              <code>Required</code>, <code>Options List</code> (comma-separated).
+            </p>
+            <div className="slds-form-element slds-m-bottom_medium">
+              <label className="slds-form-element__label" htmlFor="excel-name">
+                Schema name (optional — defaults to the file name)
+              </label>
+              <div className="slds-form-element__control">
+                <input
+                  id="excel-name"
+                  type="text"
+                  value={excelName}
+                  onChange={(e) => setExcelName(e.target.value)}
+                  className="slds-input"
+                  placeholder="Customer Onboarding Case"
+                />
+              </div>
+            </div>
+            <div className="slds-form-element slds-m-bottom_medium">
+              <div className="slds-form-element__control">
+                <div className="slds-file-selector slds-file-selector_files">
+                  <div className="slds-file-selector__dropzone">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx,.xls"
+                      className="slds-file-selector__input slds-assistive-text"
+                      id="excel-file-input"
+                      onChange={(e) => setFileLabel(e.target.files?.[0]?.name ?? null)}
+                    />
+                    <label className="slds-file-selector__body" htmlFor="excel-file-input">
+                      <span className="slds-file-selector__button slds-button slds-button_neutral">
+                        Upload File
+                      </span>
+                      <span className="slds-file-selector__text slds-medium-show">or Drop File</span>
+                    </label>
+                  </div>
+                </div>
+                {fileLabel && <p className="slds-text-body_small slds-text-color_weak slds-m-top_x-small">Selected: {fileLabel}</p>}
+              </div>
+            </div>
+            {error && <p className="slds-text-color_error slds-text-body_small slds-m-bottom_small">{error}</p>}
+            <button type="submit" disabled={submitting} className="slds-button slds-button_brand">
+              {submitting ? "Generating…" : "Upload & generate form"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={submitJson} className="slds-m-top_medium">
+            <div className="slds-form-element slds-m-bottom_medium">
+              <label className="slds-form-element__label" htmlFor="schema-json">
+                Schema JSON
+              </label>
+              <div className="slds-form-element__control">
+                <textarea
+                  id="schema-json"
+                  value={jsonText}
+                  onChange={(e) => setJsonText(e.target.value)}
+                  rows={12}
+                  spellCheck={false}
+                  className="slds-textarea"
+                  style={{ fontFamily: "monospace", fontSize: "0.75rem" }}
+                />
+              </div>
+            </div>
+            {error && <p className="slds-text-color_error slds-text-body_small slds-m-bottom_small">{error}</p>}
+            <button type="submit" disabled={submitting} className="slds-button slds-button_brand">
+              {submitting ? "Generating…" : "Import & generate form"}
+            </button>
+          </form>
+        )}
+      </div>
+    </article>
   );
 }

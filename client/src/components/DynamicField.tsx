@@ -16,19 +16,25 @@ export default function DynamicField({ field, onOverrideClick, onRevertOverride 
   const isOverridden = Boolean(field.activeOverride);
 
   return (
-    <div className="rounded-lg border border-slate-200 p-4">
-      <div className="mb-2 flex items-start justify-between gap-3">
+    <div className="slds-box slds-box_x-small">
+      <div className="slds-grid slds-grid_align-spread slds-m-bottom_x-small">
         <div>
-          <label className="text-sm font-semibold text-slate-800">
+          <label className="slds-form-element__label" style={{ fontWeight: 600 }}>
             {field.fieldName}
-            {field.required && <span className="ml-1 text-red-500">*</span>}
+            {field.required && (
+              <abbr className="slds-required" title="required">
+                {" "}
+                *
+              </abbr>
+            )}
           </label>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-            <span>{COMPONENT_LABELS[component]}</span>
+          <div className="slds-grid slds-wrap slds-gutters_xx-small slds-m-top_xx-small">
+            <span className="slds-text-body_small slds-text-color_weak">{COMPONENT_LABELS[component]}</span>
             {isOverridden && (
               <span
                 title={`Overridden from ${COMPONENT_LABELS[field.activeOverride!.previousComponent]} by ${field.activeOverride!.createdByName}: ${field.activeOverride!.heuristic}`}
-                className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700"
+                className="slds-badge slds-theme_warning slds-m-left_x-small"
+                style={{ textTransform: "none" }}
               >
                 customised — see rationale
               </span>
@@ -36,17 +42,19 @@ export default function DynamicField({ field, onOverrideClick, onRevertOverride 
           </div>
         </div>
         {user?.role === "expert" && (
-          <div className="flex shrink-0 gap-2">
+          <div className="slds-grid slds-gutters_x-small slds-no-flex">
             <button
               onClick={() => onOverrideClick(field)}
-              className="text-xs font-medium text-indigo-600 hover:underline"
+              className="slds-button slds-button_reset slds-text-link"
+              type="button"
             >
               Override
             </button>
             {isOverridden && (
               <button
                 onClick={() => onRevertOverride(field)}
-                className="text-xs font-medium text-slate-500 hover:underline"
+                className="slds-button slds-button_reset slds-text-link slds-m-left_small"
+                type="button"
               >
                 Revert
               </button>
@@ -58,19 +66,19 @@ export default function DynamicField({ field, onOverrideClick, onRevertOverride 
       <FieldInput field={field} component={component} value={value} onChange={setValue} />
 
       {isOverridden && (
-        <div className="mt-3 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
-          <p>
-            <span className="font-semibold">Heuristic:</span> {field.activeOverride!.heuristic}
+        <div className="slds-box slds-theme_warning slds-box_x-small slds-m-top_small">
+          <p className="slds-text-body_small">
+            <span style={{ fontWeight: 600 }}>Heuristic:</span> {field.activeOverride!.heuristic}
           </p>
-          <p className="mt-1">
-            <span className="font-semibold">Research reference:</span>{" "}
+          <p className="slds-text-body_small slds-m-top_xx-small">
+            <span style={{ fontWeight: 600 }}>Research reference:</span>{" "}
             {field.activeOverride!.researchReference}
           </p>
-          <p className="mt-1">
-            <span className="font-semibold">Product justification:</span>{" "}
+          <p className="slds-text-body_small slds-m-top_xx-small">
+            <span style={{ fontWeight: 600 }}>Product justification:</span>{" "}
             {field.activeOverride!.productJustification}
           </p>
-          <p className="mt-1 text-amber-600">
+          <p className="slds-text-body_small slds-m-top_xx-small">
             — {field.activeOverride!.createdByName}, {new Date(field.activeOverride!.createdAt).toLocaleDateString()}
           </p>
         </div>
@@ -90,7 +98,6 @@ function FieldInput({
   value: string | boolean;
   onChange: (v: string | boolean) => void;
 }) {
-  const base = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
   const options = field.optionsList?.length
     ? field.optionsList
     : Array.from({ length: field.optionsCount || 0 }, (_, i) => `Option ${i + 1}`);
@@ -98,54 +105,61 @@ function FieldInput({
   switch (component) {
     case "toggle":
       return (
-        <button
-          type="button"
-          onClick={() => onChange(!value)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            value ? "bg-indigo-600" : "bg-slate-300"
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              value ? "translate-x-6" : "translate-x-1"
-            }`}
-          />
-        </button>
+        <label className="slds-checkbox_toggle slds-grid">
+          <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
+          <span className="slds-checkbox_faux_container" aria-live="assertive">
+            <span className="slds-checkbox_faux" />
+            <span className="slds-checkbox_on">Yes</span>
+            <span className="slds-checkbox_off">No</span>
+          </span>
+        </label>
       );
     case "radio":
       return (
-        <div className="flex flex-wrap gap-4">
-          {options.map((opt) => (
-            <label key={opt} className="flex items-center gap-1.5 text-sm text-slate-700">
-              <input
-                type="radio"
-                name={field.id}
-                checked={value === opt}
-                onChange={() => onChange(opt)}
-              />
-              {opt}
-            </label>
-          ))}
-        </div>
+        <fieldset>
+          <div className="slds-grid slds-wrap slds-gutters_small">
+            {options.map((opt) => (
+              <div className="slds-col slds-no-flex" key={opt}>
+                <span className="slds-radio">
+                  <input
+                    type="radio"
+                    id={`${field.id}-${opt}`}
+                    name={field.id}
+                    checked={value === opt}
+                    onChange={() => onChange(opt)}
+                  />
+                  <label className="slds-radio__label" htmlFor={`${field.id}-${opt}`}>
+                    <span className="slds-radio_faux" />
+                    <span className="slds-form-element__label">{opt}</span>
+                  </label>
+                </span>
+              </div>
+            ))}
+          </div>
+        </fieldset>
       );
     case "dropdown":
       return (
-        <select className={base} value={value as string} onChange={(e) => onChange(e.target.value)}>
-          <option value="">Select…</option>
-          {options.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
+        <div className="slds-form-element__control">
+          <div className="slds-select_container">
+            <select className="slds-select" value={value as string} onChange={(e) => onChange(e.target.value)}>
+              <option value="">Select…</option>
+              {options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       );
     case "typeahead": {
       const listId = `${field.id}-options`;
       return (
-        <>
+        <div className="slds-form-element__control">
           <input
             list={listId}
-            className={base}
+            className="slds-input"
             placeholder={`Search ${options.length} options…`}
             value={value as string}
             onChange={(e) => onChange(e.target.value)}
@@ -155,34 +169,80 @@ function FieldInput({
               <option key={opt} value={opt} />
             ))}
           </datalist>
-        </>
+        </div>
       );
     }
     case "date_picker":
-      return <input type="date" className={base} value={value as string} onChange={(e) => onChange(e.target.value)} />;
+      return (
+        <div className="slds-form-element__control">
+          <input
+            type="date"
+            className="slds-input"
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+      );
     case "checkbox":
       return (
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
-          Yes
-        </label>
+        <span className="slds-checkbox">
+          <input
+            type="checkbox"
+            id={`${field.id}-checkbox`}
+            checked={Boolean(value)}
+            onChange={(e) => onChange(e.target.checked)}
+          />
+          <label className="slds-checkbox__label" htmlFor={`${field.id}-checkbox`}>
+            <span className="slds-checkbox_faux" />
+            <span className="slds-form-element__label">Yes</span>
+          </label>
+        </span>
       );
     case "textarea":
-      return <textarea rows={3} className={base} value={value as string} onChange={(e) => onChange(e.target.value)} />;
+      return (
+        <div className="slds-form-element__control">
+          <textarea
+            rows={3}
+            className="slds-textarea"
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+      );
     case "stepper":
       return (
-        <input
-          type="number"
-          className={base}
-          min={field.optionsList?.[0]}
-          value={value as string}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <div className="slds-form-element__control">
+          <input
+            type="number"
+            className="slds-input"
+            min={field.optionsList?.[0]}
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
       );
     case "slider":
-      return <input type="range" className="w-full" value={(value as string) || "0"} onChange={(e) => onChange(e.target.value)} />;
+      return (
+        <div className="slds-form-element__control">
+          <input
+            type="range"
+            className="slds-slider__range"
+            value={(value as string) || "0"}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+      );
     case "text_input":
     default:
-      return <input type="text" className={base} value={value as string} onChange={(e) => onChange(e.target.value)} />;
+      return (
+        <div className="slds-form-element__control">
+          <input
+            type="text"
+            className="slds-input"
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+      );
   }
 }
