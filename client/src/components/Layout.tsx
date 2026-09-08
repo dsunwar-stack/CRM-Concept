@@ -13,55 +13,83 @@ export default function Layout() {
   const { user, loading, logout } = useAuth();
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center text-slate-500">Loading…</div>;
+    return (
+      <div className="slds-align_absolute-center" style={{ minHeight: "100vh" }}>
+        <p className="slds-text-color_weak">Loading…</p>
+      </div>
+    );
   }
   if (!user) return <Navigate to="/login" replace />;
 
+  const initials = user.name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-                CF
-              </div>
-              <span className="text-lg font-semibold text-slate-900">Caseflow</span>
+    <div>
+      <div className="slds-global-header_container">
+        <header className="slds-global-header slds-grid slds-grid_align-spread">
+          <div className="slds-global-header__item">
+            <div className="slds-global-header__logo slds-show_inline-block slds-p-horizontal_small slds-text-heading_small">
+              ☁ Caseflow
             </div>
-            <nav className="flex gap-1">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    `rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-indigo-50 text-indigo-700"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                    }`
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-sm font-medium text-slate-800">{user.name}</div>
-              <div className="text-xs uppercase tracking-wide text-slate-400">{user.role}</div>
-            </div>
-            <button
-              onClick={logout}
-              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
-            >
-              Sign out
-            </button>
+          <div className="slds-global-header__item">
+            <ul className="slds-global-actions">
+              <li className="slds-global-actions__item slds-global-actions__avatar">
+                <div className="slds-global-actions__item-action slds-grid slds-grid_vertical-align-center">
+                  <span className="slds-avatar slds-avatar_circle slds-avatar_medium">
+                    <span className="slds-avatar__initials">{initials}</span>
+                  </span>
+                  <span className="slds-p-left_x-small slds-text-align_left">
+                    <span className="slds-text-body_small slds-line-height_reset">{user.name}</span>
+                    <br />
+                    <span className="slds-text-body_small slds-text-color_weak slds-text-title_caps">
+                      {user.role}
+                    </span>
+                  </span>
+                </div>
+              </li>
+              <li className="slds-global-actions__item">
+                <button className="slds-button slds-button_neutral" onClick={logout}>
+                  Sign out
+                </button>
+              </li>
+            </ul>
+          </div>
+        </header>
+      </div>
+
+      <div className="slds-context-bar" style={{ marginTop: "var(--slds-s-header-sizing-height, 3.125rem)" }}>
+        <div className="slds-context-bar__primary slds-grid">
+          <div className="slds-context-bar__item slds-context-bar__app-name">
+            <span className="slds-context-bar__label-action">
+              <span className="slds-truncate">Caseflow</span>
+            </span>
           </div>
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">
+        <nav className="slds-context-bar__secondary slds-grid" aria-label="Primary">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `slds-context-bar__item slds-context-bar__item_tab ${isActive ? "slds-is-active" : ""}`
+              }
+            >
+              <span className="slds-context-bar__label-action">
+                <span className="slds-truncate">{item.label}</span>
+              </span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+
+      <main className="slds-p-around_medium" style={{ maxWidth: 1120, margin: "0 auto" }}>
         <Outlet />
       </main>
     </div>
