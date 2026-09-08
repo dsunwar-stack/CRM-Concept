@@ -1,7 +1,34 @@
 @import "@salesforce-ux/design-system-2/dist/css/bundled/slds2.lightning-blue.css";
 
+/*
+ * Caseflow brand: SLDS2 Global Styling Hooks (see
+ * https://www.lightningdesignsystem.com/2e1ef8501/p/777f5a-global-styling-hooks).
+ * Overriding the --slds-g-color-brand-base-* hooks here re-themes every
+ * component that derives from the brand ramp (buttons, links, focus rings,
+ * checked states, --lwc-brandPrimary/--lwc-brandPrimaryActive and the
+ * accent-* hooks built on top of it) from one place, without touching any
+ * component class. Ramp anchored at step-50 = #4f46e5 (Caseflow's original
+ * indigo-600 mark) using the same lightness/saturation curve as Salesforce's
+ * own Lightning Blue ramp, so contrast ratios stay consistent with what SLDS
+ * components expect.
+ */
 :root {
   color-scheme: light;
+
+  --slds-g-color-brand-base-10: #0d0a47;
+  --slds-g-color-brand-base-15: #151160;
+  --slds-g-color-brand-base-20: #1a1477;
+  --slds-g-color-brand-base-30: #2018a7;
+  --slds-g-color-brand-base-40: #352bd5;
+  --slds-g-color-brand-base-45: #3f36e0;
+  --slds-g-color-brand-base-50: #4f46e5;
+  --slds-g-color-brand-base-55: #655de5;
+  --slds-g-color-brand-base-60: #7871ec;
+  --slds-g-color-brand-base-65: #9b96f0;
+  --slds-g-color-brand-base-70: #afaaf2;
+  --slds-g-color-brand-base-80: #cccaf8;
+  --slds-g-color-brand-base-90: #e8e7fb;
+  --slds-g-color-brand-base-95: #f5f4fe;
 }
 
 html,
