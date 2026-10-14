@@ -1,0 +1,2989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Assistant for Bank</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #ffffff;
+      --header: #1f232a;
+      --text: #18212f;
+      --muted: #637084;
+      --line: #e2e8f2;
+      --blue: #0076a9;
+      --green: #27ae60;
+      --danger: #d92d20;
+      --desk-expanded: 270px;
+      --desk-collapsed: 72px;
+      --radius: 8px;
+      --shadow: 0 2px 8px rgba(17, 25, 40, 0.08);
+      --panel-transition: 250ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      --app-height: 100vh;
+    }
+
+    @supports (height: 100dvh) {
+      :root { --app-height: 100dvh; }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+
+    button { font-family: inherit; }
+
+    /* ── Top bar ── */
+    .topbar {
+      height: 56px;
+      background: var(--header);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+
+    .logo {
+      width: 30px;
+      height: 32px;
+      border-radius: 2px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .logo img { width: 100%; height: 100%; object-fit: contain; display: block; position: relative; z-index: 1; background: var(--header); }
+    .logo { position: relative; }
+    /* Shown only when assets/logo.png is missing */
+    .logo-fallback { position: absolute; inset: 3px; border-radius: 4px; background: #117aca; }
+
+    .search {
+      width: min(460px, 45vw);
+      background: #252b35;
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #d7e1f3;
+      border-radius: 8px;
+      height: 36px;
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+
+    .top-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: #2f3642;
+      display: grid;
+      place-items: center;
+      color: #c8d4e8;
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      border: none;
+      transition: background 140ms ease;
+    }
+
+    .top-icon:hover { background: #3a4251; }
+    .top-icon svg { width: 18px; height: 18px; }
+
+    .top-icon .dot {
+      position: absolute;
+      top: 5px;
+      right: 6px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f0a000;
+      display: none;
+    }
+    .top-icon.has-dot .dot { display: block; }
+
+    .cs-icon path,
+    .cs-icon circle,
+    .cs-icon rect { fill: none; stroke: currentColor; stroke-width: 1.5; }
+    .cs-icon .stroke-linejoin-round { stroke-linejoin: round; }
+    .cs-icon .stroke-linecap-round  { stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Shell layout ── */
+    .shell {
+      --desk-width: var(--desk-expanded);
+      display: grid;
+      grid-template-columns: var(--desk-width) 1fr;
+      transition: grid-template-columns var(--panel-transition);
+      min-height: calc(var(--app-height) - 56px);
+      height: calc(var(--app-height) - 56px);
+    }
+
+    .shell.collapsed { grid-template-columns: var(--desk-collapsed) 1fr; }
+
+    /* ── Agent Desk panel ── */
+    .desk {
+      border-right: 1px solid var(--line);
+      background: #fff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .resizer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 8px;
+      height: 100%;
+      cursor: col-resize;
+      z-index: 20;
+    }
+
+    .resizer::after {
+      content: "";
+      position: absolute;
+      right: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 42px;
+      border-radius: 999px;
+      background: #c7d5ec;
+      opacity: 0.7;
+      transition: opacity 140ms ease;
+    }
+
+    .resizer:hover::after,
+    .resizer.dragging::after { opacity: 1; background: #8fb0e8; }
+
+    .desk-toolbar {
+      padding: 10px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+
+    .toggle {
+      border: 1px solid #b7c7e2;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      color: #2d4b7f;
+      font-size: 14px;
+      flex-shrink: 0;
+      transition: transform 140ms ease;
+    }
+
+    .toggle:hover { transform: translateY(-1px); }
+
+    .status-pill {
+      flex: 0 0 auto;
+      border: 1px solid #8cc8a4;
+      color: #0a6f3b;
+      background: #e7f8ef;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .status-pill .cs-icon { width: 13px; height: 13px; flex-shrink: 0; }
+    .status-pill .caret { font-size: 10px; margin-left: 2px; }
+
+    .status-pill.break   { border-color: #f0c36d; color: #8a5a00; background: #fff6e0; }
+    .status-pill.offline { border-color: #c4cdd8; color: #4b5868; background: #f0f2f5; }
+
+    .status-menu {
+      position: absolute;
+      top: 48px;
+      left: 46px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(17,25,40,0.14);
+      padding: 4px;
+      z-index: 30;
+      display: none;
+      min-width: 150px;
+    }
+    .status-menu.open { display: block; }
+
+    .status-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 8px 10px;
+      font-size: 13px;
+      text-align: left;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .status-option:hover { background: #f0f4fb; }
+    .status-swatch { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* ── Chat contact list ── */
+    .queue {
+      padding: 8px 6px 0;
+      display: grid;
+      gap: 8px;
+      overflow-y: auto;
+      flex: 0 0 auto;
+      max-height: 230px;
+    }
+
+    .queue-empty {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 10px 6px;
+      text-align: center;
+    }
+
+    .call-card {
+      background: #fff;
+      border: 1px solid #ced9ec;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: border-color 180ms ease, transform 180ms ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    .call-card:hover {
+      border-color: #0076a9;
+      background: #e8f4fd;
+      transform: translateY(-1px);
+    }
+
+    .call-card.active.selected {
+      border-color: #0076a9;
+      background: #0076a9;
+      box-shadow: 0 2px 6px rgba(0,118,169,0.35);
+    }
+
+    .call-card.active.selected .name,
+    .call-card.active.selected .meta { color: #fff; }
+
+    .call-card.ended:not(.selected) { opacity: 0.7; }
+
+    @keyframes ring {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(240,160,0,0.45); }
+      50%      { box-shadow: 0 0 0 6px rgba(240,160,0,0); }
+    }
+
+    .call-card.incoming {
+      border-color: #f0a000;
+      background: #fff8e6;
+      animation: ring 1.4s infinite;
+      cursor: default;
+    }
+    .call-card.incoming:hover { transform: none; background: #fff8e6; }
+
+    .incoming-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+    .incoming-actions button {
+      flex: 1;
+      height: 26px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-accept  { border: none; background: var(--green); color: #fff; }
+    .btn-decline { border: 1px solid #d0d7e2; background: #fff; color: #4b5868; }
+
+    .call-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      background: #f0f2f5;
+      color: #5a6f8e;
+    }
+    .call-icon.chat-active   { background: #e8f4fd; color: #0076a9; }
+    .call-icon.chat-selected { background: #fff; color: #0076a9; }
+    .call-icon.chat-incoming { background: #ffe9b8; color: #8a5a00; }
+    .call-icon svg { width: 16px; height: 16px; }
+
+    .unread-badge {
+      position: absolute;
+      top: -5px;
+      right: -4px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--danger);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+    }
+
+    .call-card-body { flex: 1; min-width: 0; }
+
+    .name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ── Live chat panel ── */
+    .live-chat-panel {
+      margin-top: 16px;
+      border-top: 2px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      background: #fff;
+    }
+
+    .active-strip {
+      background: #0076a9;
+      color: #fff;
+      padding: 10px;
+      font-size: 13px;
+      display: grid;
+      gap: 8px;
+      border-bottom: 1px solid #005f87;
+      flex-shrink: 0;
+      font-family: "Open Sans", sans-serif;
+    }
+    .active-strip.ended { background: #5b6c7b; border-bottom-color: #4b5868; }
+
+    .active-strip-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    .active-strip-sub {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.2;
+      color: rgba(255, 255, 255, 0.92);
+      white-space: nowrap;
+    }
+
+    .live-chat-msgs {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .live-chat-empty {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 20px;
+    }
+
+    .lc-bubble-row { display: flex; flex-direction: column; gap: 4px; }
+    .lc-bubble-row.new { animation: ai-fade-in 0.3s ease; }
+    .lc-bubble-row.incoming { align-items: flex-start; }
+    .lc-bubble-row.outgoing { align-items: flex-end; }
+
+    .lc-meta { display: flex; align-items: center; gap: 6px; padding: 0 2px; }
+    .lc-bubble-row.outgoing .lc-meta { flex-direction: row-reverse; }
+
+    .lc-sender { font-size: 11px; font-weight: 600; color: #5f6b7a; line-height: 1.4; }
+    .lc-time   { font-size: 11px; color: #8d99a5; line-height: 1.4; }
+
+    .lc-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .lc-avatar.incoming { background: #e8f4fd; color: #0972d3; }
+    .lc-avatar.outgoing { background: #0972d3; color: #fff; }
+
+    .lc-bubble {
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 8px 12px;
+      max-width: 85%;
+      word-break: break-word;
+    }
+
+    .lc-bubble.from-customer {
+      background: #f4f4f4;
+      color: #0f1111;
+      border-radius: 0 12px 12px 12px;
+      border: 1px solid #e9ebed;
+    }
+
+    .lc-bubble.from-agent {
+      background: #f0fbff;
+      color: #0f1111;
+      border: 1.5px solid #d1f1ff;
+      border-radius: 12px 0 12px 12px;
+    }
+
+    .lc-read-receipt {
+      font-size: 11px;
+      color: #5f6b7a;
+      align-self: flex-end;
+      padding-right: 2px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .lc-system {
+      align-self: center;
+      font-size: 11px;
+      color: #4b5868;
+      background: #f0f2f5;
+      border-radius: 999px;
+      padding: 3px 10px;
+      margin: 4px 0;
+    }
+
+    .live-chat-footer {
+      border-top: 1px solid var(--line);
+      padding: 8px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      flex-shrink: 0;
+      background: #fff;
+    }
+
+    .live-chat-footer input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid #cfd8e7;
+      border-radius: 4px;
+      height: 30px;
+      padding: 0 8px;
+      font-size: 12px;
+      outline: none;
+    }
+    .live-chat-footer input:focus { border-color: #0f62fe; box-shadow: 0 0 0 2px rgba(15,98,254,0.12); }
+    .live-chat-footer input:disabled { background: #f5f7f8; }
+
+    .lc-send-btn {
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      border-radius: 4px;
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .lc-send-btn:disabled { background: #a9b6c4; cursor: not-allowed; }
+    .lc-send-btn svg { width: 13px; height: 13px; }
+
+    .btn-end-chat {
+      flex-shrink: 0;
+      border: none;
+      background: var(--danger);
+      color: #fff;
+      border-radius: 999px;
+      height: 30px;
+      padding: 0 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .btn-end-chat.close { background: #4b5868; }
+
+    /* ── Collapsed Agent Desk ── */
+    .shell.collapsed .desk .status-pill,
+    .shell.collapsed .desk .call-card-body,
+    .shell.collapsed .desk .live-chat-panel { display: none; }
+
+    .shell.collapsed .desk .call-card {
+      padding: 10px 8px;
+      min-height: 44px;
+      display: grid;
+      place-items: center;
+    }
+
+    .shell.collapsed .desk .call-icon { width: 30px; height: 30px; }
+    .shell.collapsed .toggle { transform: rotate(180deg); }
+    .shell.collapsed .resizer { pointer-events: none; opacity: 0.2; }
+
+    /* ── Main content ── */
+    .main {
+      padding: 0 46px 0 14px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .breadcrumb {
+      height: 38px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      font-size: 13px;
+      color: #5a6f8e;
+      gap: 8px;
+    }
+
+    .panels-bar { width: 100%; display: grid; grid-template-columns: 1.05fr 1fr; min-height: 44px; }
+    .panels-bar-left, .panels-bar-right { display: flex; align-items: center; padding: 0 14px; }
+    .panels-bar-right { font-size: 13px; color: var(--muted); }
+
+    .page {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 0 24px;
+      min-height: 0;
+      height: calc(var(--app-height) - 138px);
+    }
+
+    .page-top-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      align-items: center;
+    }
+
+    .page-top-left, .page-top-right { padding: 0 14px; min-height: 30px; display: flex; align-items: center; }
+
+    .panel {
+      grid-row: 2;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 10px; align-items: center; font-size: 13px; font-weight: 600; }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: #51627b;
+      padding: 0 0 8px;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font: inherit;
+    }
+    .tab-btn.active { color: #1f5ec8; border-bottom-color: #1f5ec8; }
+
+    /* ── Responses panel ── */
+    .resp-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+      font-family: "Open Sans", sans-serif;
+    }
+
+    .resp-search-wrap { padding: 10px 12px 8px; flex-shrink: 0; }
+
+    .resp-search {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #c8d6ea;
+      border-radius: 8px;
+      padding: 6px 10px;
+      background: #fff;
+    }
+    .resp-search:focus-within { border-color: #005EB8; box-shadow: 0 0 0 2px rgba(0,94,184,0.12); }
+
+    .resp-search input {
+      border: none;
+      outline: none;
+      flex: 1;
+      font-size: 13px;
+      color: #485c78;
+      background: transparent;
+      font-family: inherit;
+    }
+    .resp-search input::placeholder { color: #a0afc0; }
+
+    .resp-search-clear {
+      border: none;
+      background: transparent;
+      color: #8d99a5;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      display: none;
+    }
+    .resp-search.has-value .resp-search-clear { display: block; }
+
+    .resp-filters { display: flex; gap: 6px; padding: 0 12px 10px; flex-shrink: 0; }
+
+    .resp-filter-pill {
+      border: 1px solid #c8d6ea;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: #485c78;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .resp-filter-pill svg path, .resp-filter-pill svg rect { stroke: currentColor; }
+    .resp-filter-pill.active { background: #1f5ec8; color: #fff; border-color: #1f5ec8; }
+
+    .resp-list { flex: 1; overflow-y: auto; min-height: 0; }
+
+    .resp-empty { padding: 24px 12px; font-size: 13px; color: var(--muted); text-align: center; }
+
+    .resp-category-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 8px;
+      background: #F5F7F8;
+      border-bottom: 1px solid #E2E4E5;
+      font-size: 14px;
+      font-weight: 600;
+      color: #434F5B;
+      line-height: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .resp-category-header .cat-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .resp-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf2fa;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .resp-item:hover { background: #f5f8ff; }
+
+    .resp-item-left { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+
+    .resp-item-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .resp-item-icon.critical  { background: #fff3f3; }
+    .resp-item-icon.urgent    { background: #fff7ed; }
+    .resp-item-icon.standard  { background: #edf5ff; }
+    .resp-item-icon.transfer  { background: #f0f4fb; }
+    .resp-item-icon.closed    { background: #f5f5f5; }
+    .resp-item-icon.location  { background: #edf5ff; }
+    .resp-item-icon.card      { background: #fff7ed; }
+    .resp-item-icon.reissue   { background: #edf5ff; }
+    .resp-item-icon.freeze    { background: #f0f4fb; }
+
+    .resp-item-text { min-width: 0; }
+
+    .resp-item-title { font-size: 16px; color: #0F171F; line-height: 24px; }
+
+    .resp-item-sub { font-size: 12px; line-height: 16px; color: #434F5B; margin-top: 1px; }
+
+    .resp-item-count {
+      font-size: 11px;
+      color: #5b6c7b;
+      background: #eef2f8;
+      border-radius: 999px;
+      padding: 1px 7px;
+      margin-right: 8px;
+    }
+
+    .resp-item-right { display: flex; align-items: center; }
+    .resp-item-chevron { transition: transform 0.2s; }
+    .resp-item.open .resp-item-chevron { transform: rotate(90deg); }
+
+    .resp-expand-panel { display: none; flex-direction: column; width: 100%; background: #fff; }
+    .resp-expand-panel.open { display: flex; }
+
+    .resp-expand-row {
+      display: flex;
+      width: 100%;
+      padding: 12px 0 12px 16px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      border-bottom: 1px solid #d3d9de;
+      background: #FFF;
+    }
+    .resp-expand-row:hover { background: #f8fbff; }
+
+    .resp-expand-row-inner {
+      display: flex;
+      width: 100%;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .resp-expand-text {
+      color: #434F5B;
+      font-size: 12px;
+      line-height: 16px;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .resp-expand-text:hover { color: #0F171F; }
+    .resp-expand-text.expanded { display: block; overflow: visible; -webkit-line-clamp: unset; }
+
+    .resp-show-more {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: #005EB8;
+      cursor: pointer;
+      line-height: 16px;
+    }
+    .resp-show-more:hover { text-decoration: underline; }
+
+    .resp-row-actions { display: flex; align-items: center; gap: 2px; padding-right: 8px; flex-shrink: 0; }
+
+    .resp-use-btn {
+      border: 1px solid #005EB8;
+      background: #fff;
+      color: #005EB8;
+      border-radius: 4px;
+      height: 24px;
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .resp-use-btn:hover { background: #e8f0fb; }
+
+    .resp-copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0 4px;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+    }
+    .resp-copy-btn:hover { opacity: 1; }
+
+    .resp-footer {
+      padding: 10px 12px;
+      flex-shrink: 0;
+      border-top: 1px solid #edf2fa;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .demo-label { font-size: 11px; color: #8d99a5; }
+    [hidden] { display: none !important; }
+
+    .resp-feedback-btn {
+      border: none;
+      background: transparent;
+      color: #1f5ec8;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0;
+    }
+
+    /* ── History tab ── */
+    .history-card {
+      border: 1px solid #d7e2f3;
+      border-radius: 10px;
+      background: #f9fbff;
+      padding: 10px;
+    }
+    .history-card h4 { margin: 0 0 6px; font-size: 13px; color: #2a4977; }
+    .history-card p  { margin: 0; font-size: 13px; color: #485c78; line-height: 1.4; }
+    .history-card .history-tag {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #005EB8;
+      background: #e8f0fb;
+      border-radius: 999px;
+      padding: 2px 8px;
+    }
+
+    /* ── Right assistant panel ── */
+    .assistant { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+
+    .assistant-body { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
+
+    /* ── Accordions ── */
+    .accordion { display: flex; flex-direction: column; flex-shrink: 0; }
+    .accordion-body { overflow-y: auto; max-height: 300px; }
+    .accordion-body.collapsed { display: none; }
+
+    .accordion.qa-accordion { flex: 1 0 auto; min-height: 0; }
+    .accordion.qa-accordion .accordion-body { max-height: none; }
+
+    .accordion-header {
+      width: 100%;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 14px;
+      background: #EEF2F8;
+      border: none;
+      cursor: pointer;
+      font-family: "Open Sans", sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      line-height: 24px;
+      color: #0F171F;
+      text-align: left;
+    }
+    .accordion-header:hover { background: #e4eaf5; }
+    .accordion-header[aria-expanded="false"] { background: transparent; }
+    .accordion-header[aria-expanded="false"]:hover { background: #e4eaf5; }
+
+    .accordion-header .chevron {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: #005EB8;
+      transition: transform 200ms ease;
+    }
+    .accordion-header[aria-expanded="false"] .chevron { transform: rotate(-90deg); }
+
+    .accordion-header .acc-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      background: #005EB8;
+      border-radius: 999px;
+      padding: 1px 8px;
+    }
+
+    .accordion-body-inner { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* ── Prior history block ── */
+    .history {
+      border: 1px solid #D3D9DE;
+      border-radius: 10px;
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .history-row { display: flex; justify-content: space-between; color: #305486; gap: 8px; }
+    .history-row + .history-row { border-top: 1px solid #e2e8f2; padding-top: 6px; margin-top: 2px; }
+
+    .link-btn {
+      border: none;
+      background: transparent;
+      padding: 0;
+      color: #005EB8;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+    }
+    .link-btn.strong { font-weight: 600; }
+    .link-btn:hover { text-decoration: underline; }
+
+    .summary-detail {
+      display: none;
+      gap: 8px;
+      padding: 8px 0 4px;
+      border-top: 1px solid #e2e8f2;
+      font-family: "Open Sans", sans-serif;
+    }
+    .summary-detail.open { display: grid; }
+    .summary-detail .sd-title { font-weight: 600; color: #0F171F; font-size: 13px; }
+    .summary-detail .sd-meta  { font-size: 12px; color: var(--muted); }
+    .summary-detail dt { font-size: 12px; font-weight: 600; color: #434F5B; }
+    .summary-detail dd { margin: 0 0 6px; font-size: 13px; color: #485c78; line-height: 1.45; }
+
+    /* ── Suggested responses ── */
+    .sugg-placeholder { font-size: 13px; color: var(--muted); font-family: "Open Sans", sans-serif; }
+
+    .suggestion-card {
+      border: 1px solid #D3D9DE;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #FFF;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .suggestion-card + .suggestion-card { margin-top: 8px; }
+    .suggestion-card.primary { border-color: #8fb0e8; }
+
+    .suggestion-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .suggestion-title-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: "Open Sans", sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 20px;
+      color: #101820;
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .suggestion-title-label img { width: 16px; height: 16px; flex-shrink: 0; transition: transform 200ms ease; }
+    .suggestion-card.collapsed .suggestion-title-label img { transform: rotate(-90deg); }
+    .suggestion-card.collapsed .suggestion-body { display: none; }
+
+    .best-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: #1a7f4b;
+      background: #e7f8ef;
+      border-radius: 999px;
+      padding: 1px 7px;
+      white-space: nowrap;
+    }
+
+    .sugg-actions { display: flex; gap: 10px; flex-shrink: 0; }
+
+    .copy-btn {
+      border: none;
+      background: transparent;
+      color: #005EB8;
+      font-family: "Open Sans", sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 20px;
+      cursor: pointer;
+      padding: 0;
+    }
+    .copy-btn:hover { text-decoration: underline; }
+
+    .suggestion-body { width: 100%; }
+
+    .suggestion-text {
+      font-family: "Open Sans", sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      color: #434F5B;
+      margin: 0;
+    }
+
+    .suggestion-text-shell, .iqa-text-shell { position: relative; }
+
+    .suggestion-text-wrap {
+      max-height: 80px;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: #c4cdd8 transparent;
+    }
+
+    .suggestion-text-shell.has-overflow .suggestion-text-wrap,
+    .iqa-text-shell.has-overflow .iqa-text-wrap { overflow-y: auto; }
+
+    .suggestion-text-wrap::-webkit-scrollbar,
+    .iqa-text-wrap::-webkit-scrollbar { width: 4px; }
+    .suggestion-text-wrap::-webkit-scrollbar-thumb,
+    .iqa-text-wrap::-webkit-scrollbar-thumb { background: #c4cdd8; border-radius: 2px; }
+
+    .text-fade {
+      position: absolute;
+      bottom: 0;
+      left: 1px;
+      right: 1px;
+      height: 40px;
+      background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+      pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+    .text-fade.hidden { opacity: 0; }
+
+    .suggestion-title-row { flex-wrap: wrap; }
+    .copy-btn.subtle { color: #5b6c7b; font-size: 13px; }
+    .sugg-feedback {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      font-size: 12px;
+      color: #434F5B;
+    }
+    .reason-chip {
+      border: 1px solid #c8d6ea;
+      background: #fff;
+      color: #485c78;
+      border-radius: 999px;
+      padding: 2px 9px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .reason-chip:hover { border-color: #005EB8; color: #005EB8; }
+    .sugg-feedback-done { color: #1a7f4b; font-weight: 600; }
+    .link-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .link-chip {
+      border: 1px dashed #a9b6c4;
+      background: #f5f7f8;
+      color: #434F5B;
+      border-radius: 999px;
+      padding: 2px 9px;
+      font-size: 12px;
+      cursor: help;
+    }
+    .helpful-links-label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 6px; }
+
+    /* ── IQA ── */
+    .iqa-block {
+      display: flex;
+      flex-direction: column;
+      font-family: "Open Sans", sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+    }
+
+    .iqa-block p { font-size: 14px; line-height: 20px; color: #485c78; margin: 0 0 8px; }
+    .iqa-block p:last-of-type { margin-bottom: 0; }
+
+    .iqa-question {
+      align-self: flex-end;
+      background: #f0fbff;
+      border: 1px solid #d1f1ff;
+      border-radius: 12px 0 12px 12px;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: #0f171f;
+      margin-bottom: 10px;
+      max-width: 90%;
+    }
+
+    .iqa-text-wrap {
+      max-height: 160px;
+      overflow-y: hidden;
+      padding-right: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: #c4cdd8 transparent;
+    }
+
+    .iqa-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .iqa-header strong { font-weight: 600; font-size: 14px; color: #18212f; }
+
+    .ai-badge {
+      display: inline-flex;
+      height: 20px;
+      padding: 1px 6px 3px;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      border-radius: 12px;
+      background: radial-gradient(125.99% 125.99% at 5.75% 22.5%, #F4EBD9 0%, #F7F1E5 19.1%, #F3F3E9 35.4%, #EBEFEF 49.71%, #D9ECF4 68%, #CBD9EA 100%);
+      font-size: 11px;
+      font-weight: 600;
+      color: #2D1F4E;
+      white-space: nowrap;
+    }
+    .ai-badge img { width: 14px; height: 14px; }
+
+    .feedback-btns { display: flex; gap: 8px; align-items: center; }
+
+    .feedback-btn {
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      color: #005EB8;
+      display: grid;
+      place-items: center;
+      transition: color 120ms ease, transform 120ms ease;
+    }
+    .feedback-btn:hover { color: #003d7a; transform: scale(1.15); }
+    .feedback-btn.active-up   { color: #1a7a47; }
+    .feedback-btn.active-down { color: #c0392b; }
+    .feedback-btn .cs-icon { width: 20px; height: 20px; }
+    .feedback-btn.active-up .cs-icon path,
+    .feedback-btn.active-down .cs-icon path { fill: currentColor; fill-opacity: 0.15; }
+
+    .iqa-ask {
+      border-top: 1px solid var(--line);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+      background: #fff;
+    }
+
+    .iqa-ask-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    .iqa-ask-top select {
+      border: 1px solid #cfd8e7;
+      border-radius: 4px;
+      height: 32px;
+      color: #5f6f87;
+      padding: 0 8px;
+      background: #fff;
+      font-size: 13px;
+    }
+
+    .iqa-ask-top .new-btn {
+      border: none;
+      background: transparent;
+      color: #005EB8;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .iqa-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+    .iqa-quick button {
+      border: 1px solid #c8d6ea;
+      background: #fff;
+      color: #485c78;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .iqa-quick button:hover { border-color: #005EB8; color: #005EB8; }
+
+    .iqa-ask-input-row { display: flex; align-items: center; gap: 6px; }
+
+    .iqa-ask-input-row input {
+      flex: 1;
+      border: 1px solid #cfd8e7;
+      border-radius: 4px;
+      height: 36px;
+      padding: 0 10px;
+      font-size: 13px;
+      outline: none;
+    }
+    .iqa-ask-input-row input:focus { border-color: #0f62fe; box-shadow: 0 0 0 2px rgba(15,98,254,0.15); }
+
+    .iqa-send-btn {
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      border-radius: 4px;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .iqa-send-btn svg { width: 16px; height: 16px; }
+
+    .iqa-hint { font-size: 11px; color: var(--muted); margin: 0; }
+
+    /* ── Clarification card ── */
+    .clarif-card {
+      position: relative;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .clarif-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      padding: 1px;
+      background: linear-gradient(315deg, #D3D9DE 0.01%, #2CABCE 15%, #0B76DA 35%, #004692 45%, #002F6C 50%, #A86800 60%, #CC8500 75%, #F0A000 85%, #D3D9DE 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .clarif-header { display: flex; align-items: center; justify-content: space-between; }
+    .clarif-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      font-family: "Open Sans", sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      color: #005EB8;
+    }
+    .clarif-close { border: none; background: transparent; color: #637084; font-size: 18px; cursor: pointer; padding: 0 2px; line-height: 1; }
+    .clarif-close:hover { color: #18212f; }
+    .clarif-q { font-family: "Open Sans", sans-serif; font-weight: 600; font-size: 13px; line-height: 20px; color: #0F171F; }
+    .clarif-input-row { display: flex; gap: 8px; }
+    .clarif-input-row input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid #cfd8e7;
+      border-radius: 6px;
+      height: 32px;
+      padding: 0 10px;
+      font-size: 13px;
+      outline: none;
+    }
+    .clarif-input-row input:focus { border-color: #005EB8; box-shadow: 0 0 0 2px rgba(0,94,184,0.12); }
+    .clarif-next-btn {
+      border: 1px solid #005EB8;
+      background: #fff;
+      border-radius: 6px;
+      height: 32px;
+      padding: 0 14px;
+      font-weight: 600;
+      font-size: 13px;
+      color: #005EB8;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .clarif-next-btn:hover { background: #e8f0fb; }
+
+    .clarif-sources {
+      border: none;
+      background: transparent;
+      color: #005EB8;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      padding: 2px 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .clarif-sources svg { transition: transform 200ms ease; }
+    .clarif-sources.open svg { transform: rotate(180deg); }
+
+    .sources-list { display: grid; gap: 4px; font-size: 13px; }
+    .sources-list a { color: #1a56db; text-decoration: none; }
+    .sources-list a:hover { text-decoration: underline; }
+
+    .clarif-answered-row { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px solid #e2e8f2; }
+    .clarif-answered-row:last-of-type { border-bottom: none; }
+    .clarif-answered-q { font: 600 12px/16px 'Open Sans', sans-serif; color: #485c78; }
+    .clarif-answered-a { font: 400 13px/18px 'Open Sans', sans-serif; color: #0f171f; background: #f4f7fb; border-radius: 4px; padding: 4px 8px; }
+    .clarif-done-header { display: flex; align-items: center; gap: 6px; font: 600 13px/18px 'Open Sans', sans-serif; color: #1a7f4b; }
+
+    .view-clarif {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      border: none;
+      border-top: 1px solid #e2e8f2;
+      background: transparent;
+      color: #005EB8;
+      padding: 8px 2px 0;
+      margin-top: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      gap: 6px;
+    }
+    .view-clarif:hover { color: #003d7a; }
+    .view-clarif .view-clarif-label { display: flex; align-items: center; gap: 6px; }
+    .view-clarif .view-clarif-chevron { transition: transform 200ms ease; }
+    .view-clarif.open .view-clarif-chevron { transform: rotate(180deg); }
+
+    /* ── Animations ── */
+    @keyframes typing-dot {
+      0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+      40%           { opacity: 1;    transform: translateY(-3px); }
+    }
+    .lc-typing-bubble {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 7px 10px;
+      background: #EDEFF7;
+      border-radius: 2px 8px 8px 8px;
+      width: fit-content;
+    }
+    .lc-typing-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #637084;
+      animation: typing-dot 1s infinite ease-in-out;
+    }
+    .lc-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .lc-typing-dot:nth-child(3) { animation-delay: 0.30s; }
+
+    @keyframes ai-dot-pulse {
+      0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+      40%           { opacity: 1;    transform: scale(1); }
+    }
+    @keyframes ai-fade-in {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .ai-thinking {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 0 6px;
+      font-size: 12px;
+      color: #005EB8;
+      font-style: italic;
+    }
+    .ai-thinking-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #005EB8;
+      animation: ai-dot-pulse 1.2s infinite ease-in-out;
+    }
+    .ai-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+    .ai-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+    .ai-updated { animation: ai-fade-in 0.45s ease; }
+
+    /* ── Toast ── */
+    .toast-stack {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: grid;
+      gap: 8px;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .toast {
+      background: #1f232a;
+      color: #fff;
+      font-size: 13px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+      animation: ai-fade-in 0.25s ease;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .topbar-right { display: none; }
+      .main { padding-left: 8px; padding-right: 8px; overflow: auto; }
+      .page { grid-template-columns: 1fr; grid-template-rows: auto auto auto; height: auto; }
+      .page-top-row { grid-template-columns: 1fr; row-gap: 6px; }
+      .panels-bar { grid-template-columns: 1fr; row-gap: 6px; padding: 8px 0; }
+      .panel { grid-row: auto; min-height: 480px; }
+      .panel + .panel { border-top: 1px solid var(--line); }
+    }
+
+    @media (max-width: 700px) {
+      .shell { grid-template-columns: var(--desk-collapsed) 1fr; }
+      .shell .status-pill,
+      .shell .desk .call-card-body,
+      .shell .desk .live-chat-panel { display: none; }
+      .shell .desk .call-card { padding: 10px 8px; min-height: 44px; display: grid; place-items: center; }
+      .shell .desk .call-icon { width: 30px; height: 30px; }
+      .search { width: min(200px, 30vw); }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo"><span class="logo-fallback" aria-hidden="true"></span></div>
+      <div>Agent Desk</div>
+    </div>
+    <input class="search" type="text" placeholder="Search" aria-label="Search" />
+    <div class="topbar-right" aria-label="Top bar actions">
+      <span style="opacity:0.85; font-size:13px;">Link ↗</span>
+      <button class="top-icon" id="notifBtn" type="button" title="Notifications" aria-label="Notifications">
+        <svg class="cs-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 12H2C1.61 12 1.37 11.56 1.59 11.24L4 8V5C4 2.79 5.79 1 8 1C10.21 1 12 2.79 12 5V8L14.41 11.24C14.63 11.57 14.39 12 14 12Z" class="stroke-linejoin-round"/>
+          <path d="M6 13C6 14.1 6.9 15 8 15C9.1 15 10 14.1 10 13" class="stroke-linejoin-round"/>
+        </svg>
+        <span class="dot"></span>
+      </button>
+      <button class="top-icon" type="button" title="Settings" aria-label="Settings" onclick="toast('Settings aren\'t part of this prototype')">
+        <svg class="cs-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6.11 1.73C6.18 1.31 6.55 1 6.97 1H9C9.42 1 9.78 1.31 9.85 1.73L10.02 2.73C10.07 3.02 10.26 3.26 10.52 3.41L10.69 3.5C10.94 3.66 11.25 3.7 11.53 3.61L12.48 3.26C12.88 3.11 13.33 3.26 13.55 3.64L14.56 5.38C14.77 5.75 14.69 6.22 14.36 6.49L13.58 7.13C13.35 7.32 13.24 7.61 13.25 7.9V8.1C13.25 8.39 13.36 8.68 13.58 8.87L14.36 9.51C14.69 9.78 14.78 10.25 14.56 10.62L13.55 12.36C13.34 12.73 12.89 12.89 12.49 12.74L11.54 12.39C11.26 12.29 10.96 12.33 10.7 12.49L10.53 12.59C10.27 12.73 10.08 12.98 10.03 13.27L9.86 14.27C9.79 14.69 9.42 15 9 15H6.98C6.55 15 6.19 14.69 6.12 14.27L5.95 13.27C5.9 12.98 5.71 12.74 5.45 12.59L5.28 12.49C5.03 12.34 4.72 12.29 4.44 12.39L3.49 12.74C3.09 12.89 2.64 12.74 2.43 12.36L1.42 10.62C1.21 10.25 1.29 9.78 1.62 9.51L2.4 8.87C2.63 8.68 2.74 8.39 2.73 8.1V7.9C2.73 7.6 2.62 7.32 2.4 7.13L1.62 6.49C1.29 6.22 1.2 5.75 1.42 5.38L2.43 3.64C2.64 3.27 3.09 3.11 3.5 3.26L4.45 3.61C4.73 3.71 5.03 3.67 5.29 3.51L5.46 3.41C5.72 3.27 5.91 3.03 5.96 2.73L6.11 1.73Z" class="stroke-linecap-round stroke-linejoin-round"/>
+          <path d="M10 8C10 9.1 9.1 10 8 10C6.9 10 6 9.1 6 8C6 6.9 6.9 6 8 6C9.1 6 10 6.9 10 8Z" class="stroke-linecap-round stroke-linejoin-round"/>
+        </svg>
+      </button>
+      <button class="top-icon" type="button" title="Profile" aria-label="Profile" onclick="toast('Signed in as Alex Morgan · Chat team')">
+        <svg class="cs-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 7C9.66 7 11 5.66 11 4C11 2.34 9.66 1 8 1C6.34 1 5 2.34 5 4C5 5.66 6.34 7 8 7Z" />
+          <path d="M2 16V13C2 11.34 3.34 10 5 10H11C12.66 10 14 11.34 14 13V16" class="stroke-linejoin-round"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="shell" id="shell">
+    <!-- ── Agent Desk sidebar ── -->
+    <aside class="desk" aria-label="Agent Desk panel">
+      <div class="resizer" id="deskResizer" aria-hidden="true"></div>
+
+      <div class="desk-toolbar">
+        <button class="toggle" id="toggleBtn" aria-expanded="true" aria-controls="deskQueue" title="Expand/collapse Agent Desk panel">❮</button>
+        <button class="status-pill" id="statusPill" type="button" aria-haspopup="true" aria-expanded="false"></button>
+        <div class="status-menu" id="statusMenu" role="menu">
+          <button class="status-option" type="button" data-status="available"><span class="status-swatch" style="background:#27ae60"></span>Available</button>
+          <button class="status-option" type="button" data-status="break"><span class="status-swatch" style="background:#f0a000"></span>Break</button>
+          <button class="status-option" type="button" data-status="offline"><span class="status-swatch" style="background:#8d99a5"></span>Offline</button>
+        </div>
+      </div>
+
+      <div class="queue" id="deskQueue"></div>
+
+      <div class="live-chat-panel" id="liveChatPanel">
+        <div class="active-strip" id="activeStrip">
+          <div class="active-strip-row">
+            <strong id="activeStripName"></strong>
+            <span id="liveChatTimer">00:00</span>
+          </div>
+          <div class="active-strip-sub" id="activeStripSub">Connected Chat</div>
+        </div>
+
+        <div class="live-chat-msgs" id="liveChatMsgs"></div>
+
+        <div class="live-chat-footer">
+          <input type="text" id="liveChatInput" placeholder="Type a message…" aria-label="Type a message" />
+          <button class="lc-send-btn" id="lcSendBtn" type="button" aria-label="Send">
+            <svg class="cs-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 1L7 9" class="stroke-linejoin-round"/>
+              <path d="M15 1L10 15L7 9L1 6L15 1Z" class="stroke-linejoin-round"/>
+            </svg>
+          </button>
+          <button class="btn-end-chat" id="endChatBtn" type="button">End Chat</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Main content ── -->
+    <main class="main">
+      <div class="breadcrumb">Parent &gt; current_page</div>
+      <div class="panels-bar">
+        <div class="panels-bar-left">
+          <div style="font-size: 18px; font-weight: 700; letter-spacing: 0.2px;">
+            <span style="color:#4a64ff;">A</span><span style="color:#32a2ff;">g</span><span style="color:#38bdf8;">e</span><span style="color:#5e7dff;">n</span><span style="color:#4a64ff;">t</span>
+            <span style="font-size: 12px; color:#6f84a5; margin-left: 4px;">Assist</span>
+          </div>
+        </div>
+        <div class="panels-bar-right" id="contextLabel"></div>
+      </div>
+
+      <section class="page">
+        <div class="page-top-row">
+          <div class="page-top-left">
+            <div class="tabs" role="tablist" aria-label="Chat view tabs">
+              <button class="tab-btn active" id="tabResponses" role="tab" aria-selected="true" aria-controls="panelResponses" type="button">Responses</button>
+              <button class="tab-btn" id="tabHistory" role="tab" aria-selected="false" aria-controls="panelHistory" type="button">History</button>
+            </div>
+          </div>
+          <div class="page-top-right"></div>
+        </div>
+
+        <!-- Left panel -->
+        <article class="panel">
+          <div id="panelResponses" role="tabpanel" aria-labelledby="tabResponses" style="display:flex; flex-direction:column; height:100%; min-height:0;">
+            <div class="resp-panel">
+              <div class="resp-search-wrap">
+                <div class="resp-search" id="respSearchBox">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="6.5" cy="6.5" r="4.5" stroke="#a0afc0" stroke-width="1.5"/>
+                    <path d="M10 10L14 14" stroke="#a0afc0" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                  <input type="text" id="respSearch" placeholder="Search responses" aria-label="Search responses">
+                  <button class="resp-search-clear" id="respSearchClear" type="button" aria-label="Clear search">&times;</button>
+                </div>
+              </div>
+
+              <div class="resp-filters" id="respFilters">
+                <button class="resp-filter-pill active" type="button" data-filter="all">All</button>
+                <button class="resp-filter-pill" type="button" data-filter="card">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="12" height="10" rx="2" stroke-width="1.4"/><path d="M5 3V2M11 3V2" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  Card
+                </button>
+                <button class="resp-filter-pill" type="button" data-filter="retail">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13V7l5-4 5 4v6" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="6" y="9" width="4" height="4" rx="0.5" stroke-width="1.2"/></svg>
+                  Retail
+                </button>
+              </div>
+
+              <div class="resp-list" id="respList"></div>
+
+              <div class="resp-footer">
+                <button class="resp-feedback-btn" type="button" onclick="toast('Thanks — the feedback form would open here')">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L1 6H6L8 1Z" stroke="#1f5ec8" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                  Give Feedback
+                </button>
+                <span class="demo-label">Concept prototype · scripted responses · invented data</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="panelHistory" role="tabpanel" aria-labelledby="tabHistory" style="display:none; flex-direction:column; height:100%; padding:14px; overflow-y:auto; gap:10px;"></div>
+        </article>
+
+        <!-- Right panel: AI Assistant -->
+        <article class="panel">
+          <div class="assistant">
+            <div class="assistant-body">
+
+              <div class="accordion">
+                <button class="accordion-header" aria-expanded="true" type="button" onclick="toggleAccordion(this)">
+                  <svg class="chevron" viewBox="0 0 16 16" width="16" height="16" fill="none"><path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  AI Assistant
+                </button>
+                <div class="accordion-body">
+                  <div class="accordion-body-inner" id="priorSummary"></div>
+                </div>
+              </div>
+
+              <div class="accordion">
+                <button class="accordion-header" aria-expanded="true" type="button" onclick="toggleAccordion(this)">
+                  <svg class="chevron" viewBox="0 0 16 16" width="16" height="16" fill="none"><path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Suggested Next Best Response
+                </button>
+                <div class="accordion-body">
+                  <div class="accordion-body-inner">
+                    <div id="suggestionCard"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="accordion qa-accordion">
+                <button class="accordion-header" id="iqaAccordionBtn" aria-expanded="false" type="button" onclick="toggleAccordion(this)">
+                  <svg class="chevron" viewBox="0 0 16 16" width="16" height="16" fill="none"><path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Assist Q&amp;A
+                </button>
+                <div class="accordion-body collapsed">
+                  <div class="accordion-body-inner">
+                    <div class="iqa-block" id="iqaBlock"></div>
+                    <div class="clarif-card" id="iqaClarifCard" style="display:none"></div>
+                    <button class="clarif-sources" id="iqaClarifSources" style="display:none" type="button"></button>
+                    <div class="sources-list" id="iqaSourcesList" style="display:none"></div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="iqa-ask">
+              <div class="iqa-ask-top">
+                <select aria-label="Category" id="iqaCategory">
+                  <option>Card</option>
+                  <option>Payments</option>
+                  <option>Disputes</option>
+                </select>
+                <button class="new-btn" type="button" id="iqaNewBtn">
+                  <svg style="width:14px;height:14px;" viewBox="0 0 16 16" fill="none"><path d="M8 1V15M1 8H15" stroke="#005EB8" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  New
+                </button>
+              </div>
+              <div class="iqa-quick" id="iqaQuick"></div>
+              <div class="iqa-ask-input-row">
+                <input type="text" id="iqaInput" placeholder="Type your question or response" aria-label="Ask Assist Q&amp;A" />
+                <button class="iqa-send-btn" type="button" aria-label="Send" id="iqaSendBtn">
+                  <svg class="cs-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 1L7 9" class="stroke-linejoin-round"/>
+                    <path d="M15 1L10 15L7 9L1 6L15 1Z" class="stroke-linejoin-round"/>
+                  </svg>
+                </button>
+              </div>
+              <p class="iqa-hint">Full sentences work best. Answers are AI Generated and should be verified.</p>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <script>
+  /* ════════════════════════════════════════════════════════════════
+     Helpers
+     ════════════════════════════════════════════════════════════════ */
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fmt = (s) => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  const nowTime = () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  function toast(msg) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    $('toastStack').appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    }
+    fallbackCopy(text);
+    return Promise.resolve();
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+    ta.remove();
+  }
+
+  function thinkingHTML() {
+    return '<div class="ai-thinking"><div class="ai-thinking-dot"></div><div class="ai-thinking-dot"></div><div class="ai-thinking-dot"></div>&nbsp;Assist is thinking…</div>';
+  }
+
+  const CHAT_ICON = '<svg class="cs-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14 1H2C1.45 1 1 1.45 1 2V11C1 11.55 1.45 12 2 12H5V15L9 12H14C14.55 12 15 11.55 15 11V2C15 1.45 14.55 1 14 1Z" class="stroke-linejoin-round"/></svg>';
+  const STATUS_ICON = '<svg class="cs-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="7" /><path d="M4.5 7.5L7 10L11 5" class="stroke-linejoin-round"/></svg>';
+  const COPY_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.5415 3.79865V1.55615H7.54148V3.79865H4.45898V22.4437H19.5415V3.79865H16.5415ZM9.04148 3.05615H15.0415V5.36615H9.04148V3.05615ZM18.0415 20.9437H5.95898V5.29865H7.54148V6.86615H16.5415V5.29865H18.0415V20.9437Z" fill="#005EB8"/><path d="M16.48 14.1862H7.59848V15.6862H16.48V14.1862Z" fill="#005EB8"/><path d="M16.48 9.7904H7.59848V11.2904H16.48V9.7904Z" fill="#005EB8"/></svg>';
+  const CHEVRON_RIGHT = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2212%22%20height=%2212%22%20viewBox=%220%200%2012%2012%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M4.16186%2011.1114L3.23111%2010.1863L7.35198%206.03915L3.20898%201.88978L4.13786%200.962402L9.20448%206.0369L4.16186%2011.1114Z%22%20fill=%22%235B6C7B%22/%3E%20%3C/svg%3E';
+  const CHEVRON_DOWN = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2216%22%20height=%2216%22%20viewBox=%220%200%2016%2016%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M7.96765%2012.3543L1.20215%205.63134L2.43515%204.39034L7.96465%209.88484L13.4971%204.36084L14.7336%205.59934L7.96765%2012.3543Z%22%20fill=%22%23005EB8%22/%3E%20%3C/svg%3E';
+  const AI_SPARKLE = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2212%22%20height=%2212%22%20viewBox=%220%200%2012%2012%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M5.99941%200.952512L4.42479%204.49589L0.946289%205.96026L4.42366%207.56601L5.99941%2011.0295L7.57891%207.56601L11.0525%205.96026L7.57741%204.49589L5.99941%200.952512Z%22%20fill=%22%23402145%22/%3E%20%3Cpath%20d=%22M9.60841%204.06276L10.1274%202.92239L11.2869%202.38726L10.1267%201.89826L9.60841%200.733887L9.09167%201.89826L7.92916%202.38726L9.09016%202.92239L9.60841%204.06276Z%22%20fill=%22%23402145%22/%3E%20%3C/svg%3E';
+
+  const ICONS = {
+    critical: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M4.7998%208.16016H21.5998V21.6002H4.7998L11.5198%2014.8802L4.7998%208.16016Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M11.5195%2021.6H21.5995V11.52L11.5195%2021.6Z%22%20fill=%22%23005EB8%22/%3E%20%3Cpath%20d=%22M23.2796%208.16016H21.5996V28.3202H23.2796V8.16016Z%22%20fill=%22%23002F6C%22/%3E%20%3Cpath%20d=%22M22.7202%2012.6402C25.1944%2012.6402%2027.2002%2010.6344%2027.2002%208.16016C27.2002%205.68594%2025.1944%203.68018%2022.7202%203.68018C20.246%203.68018%2018.2402%205.68594%2018.2402%208.16016C18.2402%2010.6344%2020.246%2012.6402%2022.7202%2012.6402Z%22%20fill=%22%23FFB619%22/%3E%20%3Cpath%20d=%22M22.7195%2010.9601C23.1061%2010.9601%2023.4195%2010.6467%2023.4195%2010.2601C23.4195%209.87346%2023.1061%209.56006%2022.7195%209.56006C22.3329%209.56006%2022.0195%209.87346%2022.0195%2010.2601C22.0195%2010.6467%2022.3329%2010.9601%2022.7195%2010.9601Z%22%20fill=%22white%22/%3E%20%3Cpath%20d=%22M22.0376%206.21586L22.3716%208.52584C22.3686%208.5491%2022.3686%208.57264%2022.3716%208.59584C22.3915%208.66977%2022.4352%208.73497%2022.4959%208.7815C22.5566%208.82804%2022.631%208.85324%2022.7076%208.85324C22.7841%208.85324%2022.8584%208.82804%2022.9192%208.7815C22.9799%208.73497%2023.0237%208.66977%2023.0436%208.59584C23.0465%208.57197%2023.0465%208.54777%2023.0436%208.52384L23.3996%206.21586C23.4117%206.16476%2023.4177%206.11239%2023.4176%206.05986C23.4176%205.87421%2023.3438%205.69616%2023.2125%205.56489C23.0812%205.43361%2022.9032%205.35986%2022.7176%205.35986C22.5319%205.35986%2022.3538%205.43361%2022.2226%205.56489C22.0913%205.69616%2022.0176%205.87421%2022.0176%206.05986C22.0174%206.11239%2022.0234%206.16476%2022.0356%206.21586H22.0376Z%22%20fill=%22white%22/%3E%20%3C/svg%3E',
+    urgent: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M27.5202%207.68018H6.24023V27.8402H27.5202V7.68018Z%22%20fill=%22%23005EB8%22/%3E%20%3Cpath%20d=%22M25.2801%2011.04H5.12012V23.36H25.2801V11.04Z%22%20fill=%22white%22/%3E%20%3Cpath%20d=%22M26.4001%206.56006H5.12012V11.0401H26.4001V6.56006Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M11.8405%2014.4004H8.48047V17.7604H11.8405V14.4004Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M23.0397%2014.4004H19.6797V17.7604H23.0397V14.4004Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M17.4401%2014.4004H14.0801V17.7604H17.4401V14.4004Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M11.8405%2020H8.48047V23.36H11.8405V20Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M17.4401%2020H14.0801V23.36H17.4401V20Z%22%20fill=%22%233F9CF3%22/%3E%20%3Ccircle%20cx=%2224.72%22%20cy=%2225.04%22%20r=%225.04%22%20fill=%22%238BC544%22/%3E%20%3C/svg%3E',
+    standard: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M8.2002%208.72012C8.2002%205.62%2010.7%203.12%2013.8%203.12C16.9%203.12%2019.4%205.62%2019.4%208.72V16.56C19.4%2017.18%2018.9%2017.68%2018.28%2017.68C17.66%2017.68%2017.16%2017.18%2017.16%2016.56V8.72C17.16%206.86%2015.66%205.36%2013.8%205.36C11.94%205.36%2010.44%206.86%2010.44%208.72H8.2002Z%22%20fill=%22%23B770C2%22/%3E%20%3Crect%20x=%223.72%22%20y=%2213.2%22%20width=%2220.16%22%20height=%2213.44%22%20rx=%220.56%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M7.08008%2026.6402H23.3201C23.63%2026.64%2023.88%2026.39%2023.88%2026.08V13.76C23.88%2013.45%2023.63%2013.2%2023.32%2013.2H20.5201L7.08008%2026.6402Z%22%20fill=%22%23005EB8%22/%3E%20%3Cpath%20d=%22M16.04%2018.24C16.04%2017.0%2015.04%2016.0%2013.8%2016.0C12.56%2016.0%2011.56%2017.0%2011.56%2018.24C11.56%2019.07%2012.01%2019.79%2012.68%2020.18V23.84H14.92V20.18C15.59%2019.79%2016.04%2019.07%2016.04%2018.24Z%22%20fill=%22white%22/%3E%20%3C/svg%3E',
+    transfer: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M15.9843%2012.8159L30.9749%2027.8066C31.43%2028.26%2031.43%2029.05%2030.9749%2029.5037L29.5041%2030.9745C29.05%2031.43%2028.26%2031.43%2027.8071%2030.9745L12.8164%2015.9838L15.9843%2012.8159Z%22%20fill=%22%23005EB8%22/%3E%20%3Ccircle%20cx=%2214.4%22%20cy=%2214.4%22%20r=%2212.32%22%20fill=%22%233F9CF3%22/%3E%20%3Ccircle%20cx=%2214.4%22%20cy=%2214.4%22%20r=%2210.08%22%20fill=%22white%22/%3E%20%3Crect%20x=%229.64%22%20y=%228.24%22%20width=%229.52%22%20height=%2212.32%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M17.4803%209.91992H11.3203V11.0399H17.4803V9.91992Z%22%20fill=%22%23005EB8%22/%3E%20%3Cpath%20d=%22M17.4803%2012.7202H11.3203V13.8402H17.4803V12.7202Z%22%20fill=%22%23005EB8%22/%3E%20%3Cpath%20d=%22M14.1203%2015.52H11.3203V16.64H14.1203V15.52Z%22%20fill=%22%23FFB619%22/%3E%20%3C/svg%3E',
+    closed: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Crect%20x=%224.12%22%20y=%228.3%22%20width=%2223.76%22%20height=%2215.12%22%20rx=%221.08%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M26.7995%2023.4198H9.51953L24.6395%208.29981H26.7995C27.39%208.3%2027.88%208.79%2027.88%209.38V22.34C27.88%2022.93%2027.39%2023.42%2026.8%2023.42Z%22%20fill=%22%23005EB8%22/%3E%20%3Cpath%20d=%22M17.0803%2020.1797H6.28027V21.2597H17.0803V20.1797Z%22%20fill=%22%23002F6C%22/%3E%20%3Crect%20x=%226.28%22%20y=%2215.32%22%20width=%223.78%22%20height=%222.7%22%20rx=%220.54%22%20fill=%22%23FFB619%22/%3E%20%3Ccircle%20cx=%2226.01%22%20cy=%2221.33%22%20r=%224.48%22%20fill=%22%23FFB619%22/%3E%20%3Cpath%20d=%22M26.0119%2022.7998L24.2819%2023.7098L24.6119%2021.7838L23.2119%2020.4178L25.1452%2020.1378L26.0119%2018.3838L26.8786%2020.1378L28.8119%2020.4178L27.4119%2021.7838L27.7419%2023.7098L26.0119%2022.7998Z%22%20fill=%22white%22/%3E%20%3C/svg%3E',
+    location: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M17.1199%2015.4399H14.8799V24.3999H17.1199V15.4399Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M11.5203%2015.4399H9.28027V24.3999H11.5203V15.4399Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M22.7205%2014.8799H20.4805V23.8399H22.7205V14.8799Z%22%20fill=%22%23005EB8%22/%3E%20%3Cpath%20d=%22M26.0799%2024.96H5.91992V27.2H26.0799V24.96Z%22%20fill=%22%23002F6C%22/%3E%20%3Cpath%20d=%22M24.96%2022.7202H7.04004V24.9602H24.96V22.7202Z%22%20fill=%22%23005EB8%22/%3E%20%3Cpath%20d=%22M24.96%2013.7598H7.04004V15.9998H24.96V13.7598Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M7.04004%2013.7602H24.96L16%206.7915L7.04004%2013.7602Z%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M10.6885%2013.7602L15.9998%209.62891L21.3111%2013.7602H10.6885Z%22%20fill=%22%23005EB8%22/%3E%20%3C/svg%3E',
+    reissue: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%20fill=%22none%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%20%3Cpath%20d=%22M28.87%2015.75A12.9%2012.9%200%201%200%2025.5%2025.1%22%20stroke=%22%23FFB619%22%20stroke-width=%221.2%22%20stroke-linecap=%22round%22/%3E%20%3Cpath%20d=%22M27.2%2015.2L29.4%2017.4L31.6%2015.2%22%20stroke=%22%23FFB619%22%20stroke-width=%221.2%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22/%3E%20%3Ccircle%20cx=%2216%22%20cy=%2216%22%20r=%228.96%22%20fill=%22%233F9CF3%22/%3E%20%3Cpath%20d=%22M22.3361%209.66406C25.84%2013.17%2025.84%2018.83%2022.3361%2022.3361C18.83%2025.84%2013.17%2025.84%209.66406%2022.3361%22%20fill=%22%23005EB8%22/%3E%20%3Ctext%20x=%2216%22%20y=%2220.5%22%20font-size=%2212%22%20font-family=%22Arial%22%20font-weight=%22700%22%20fill=%22white%22%20text-anchor=%22middle%22%3E%C2%A3%3C/text%3E%20%3C/svg%3E'
+  };
+  ICONS.card = ICONS.critical;
+  ICONS.freeze = ICONS.standard;
+
+  /* ════════════════════════════════════════════════════════════════
+     Data — canned responses ({name} becomes the active customer's first name)
+     ════════════════════════════════════════════════════════════════ */
+  const RESPONSES = [
+    {
+      category: 'Opening, Closing Outreach, and Transfer Canned Messaging',
+      tag: 'retail',
+      items: [
+        { id: 'critical', title: 'Critical', sub: '(Only to be used for initial response on NEW CHATS)', icon: 'critical', messages: [
+          'Hi, welcome to Meridian Bank. How can I help you today?',
+          "Hello, let's take a look.",
+          "Hi, I can see the transaction you're talking about. I'm just passing you over to one of our specialists who can help.",
+          "Hi. I'm just looking into this for you.",
+          "Hi there. OK, let's get your card working again."
+        ]},
+        { id: 'urgent', title: 'Urgent', icon: 'urgent', messages: [
+          "Hi {name}, I can see this is urgent — I'm looking at your account right now.",
+          "Thanks for your patience, {name}. I'm prioritising this and will update you in just a moment.",
+          'I understand this needs sorting quickly. Let me take care of it for you now.'
+        ]},
+        { id: 'standard', title: 'Standard', icon: 'standard', messages: [
+          'Hi {name}, thanks for contacting Meridian Bank. How can I help you today?',
+          "Thanks for getting in touch, {name}. Could you tell me a little more about what's happening?",
+          "Thanks for waiting. I've reviewed your account and I'm ready to help."
+        ]},
+        { id: 'transferring', title: 'Transferring', icon: 'transfer', messages: [
+          "I'm going to transfer you to a specialist who can help with this. Please stay in the chat — they'll be with you shortly.",
+          "To get this resolved properly, I'm passing you to our disputes team. I've shared the details so you won't need to repeat yourself.",
+          "Thanks for your patience, {name}. You're now being connected to a colleague who can help further."
+        ]},
+        { id: 'closed', title: 'Closed Messaging', icon: 'closed', messages: [
+          'Is there anything else I can help you with today, {name}?',
+          'Thanks for chatting with Meridian Bank today, {name}. Have a great rest of your day.',
+          "As we haven't heard from you in a while, I'll close this chat now. You can message us any time if you need further help."
+        ]}
+      ]
+    },
+    {
+      category: 'Debit Card',
+      tag: 'card',
+      items: [
+        { id: 'unsupported', title: 'Unsupported Countries', icon: 'location', messages: [
+          "Unfortunately your debit card can't be used in this country due to sanctions restrictions. I'm sorry for the inconvenience.",
+          'Transactions from certain countries are blocked for your security. You can find the full list of supported countries in the app under Card > Travel.'
+        ]},
+        { id: 'lost', title: 'Report Card Lost/Stolen/Damaged', icon: 'card', messages: [
+          "I'm sorry to hear that, {name}. I've frozen your card so no one can use it. Would you like me to order a replacement?",
+          'Your replacement card will arrive in 3–5 working days. Your card number will change, so please update any saved payments.',
+          "If you spot any transactions you don't recognise, let me know and I'll raise a dispute straight away."
+        ]},
+        { id: 'reissue', title: 'Re-issue Card Details', icon: 'reissue', messages: [
+          'I can re-issue your card with new details. Your current card will stop working once the new one is activated.',
+          'Your new card details are available immediately in the app under Card > View details, and the physical card will arrive in 3–5 working days.'
+        ]},
+        { id: 'freeze', title: 'Freeze/Unfreeze Card', icon: 'freeze', messages: [
+          'You can freeze or unfreeze your card instantly in the app — go to Card and tap Freeze card.',
+          "I've unfrozen your card, {name}. You should be able to use it again straight away.",
+          "I've frozen your card for now so no new transactions can go through. You can unfreeze it any time in the app."
+        ]}
+      ]
+    }
+  ];
+
+  /* ════════════════════════════════════════════════════════════════
+     Data — contacts, scripts, AI content
+     ════════════════════════════════════════════════════════════════ */
+  const AGENT = { name: 'Alex', initials: 'AM' };
+
+  function makeContact(id, name, first, status) {
+    return { id, name, first, status, seconds: 0, messages: [], unread: 0, typing: false,
+             replyStage: 0, aiShown: new Set(), aiIndex: null, aiThinking: false,
+             started: false, timeouts: [], summaryOpen: false, rendered: 0, draft: '' };
+  }
+
+  const contacts = {
+    nina: makeContact('nina', 'Nina Ashby', 'Nina', 'connected'),
+    jo:  makeContact('jo',  'Jo Marlow',   'Jo',  'connected'),
+    sam:   makeContact('sam',   'Sam Okafor',  'Sam',   'pending')
+  };
+  let order = ['nina', 'jo'];
+  let activeId = 'nina';
+  let agentStatus = 'available';
+
+  const openingMessages = {
+    nina: "Hi, I made a donation last month but I don't think it ever reached the charity — they have no record of receiving it. Can you help?",
+    jo:  "Hi, I've just noticed a charge on my account for £34.99 from BRMBL*MKTPLACE and I have no idea what it's for. I don't remember ordering anything from Bramblemart recently — can you help me look into this?",
+    sam:   "Hi, my card just got declined at a restaurant in Lisbon and now the app says it's frozen. I'm travelling for another week — can you unfreeze it?"
+  };
+
+  const profiles = {
+    nina: {
+      summary: {
+        title: 'Initiate Dispute',
+        meta: '1 April, 10:00, 15 min',
+        problem: 'The customer has a charge on their card for a donation they made, but the recipient has no record of the donation and the customer did not receive a donation receipt.',
+        action: 'The customer contacted the merchant multiple times via email and provided the transaction date, but the merchant still has no record of the donation.',
+        agentAction: "The agent checked the customer's account and confirmed the transaction date, then offered to file a dispute with the merchant on the customer's behalf.",
+        result: 'The agent put a hold on the charge and submitted a dispute request. The merchant typically responds within 3 days and the customer should hear from the bank within 7 to 10 days.'
+      },
+      priorRows: [['Initiate Dispute', '29/06'], ['Posted Transaction Inquiry', '28/06'], ['Initiate Fee Refund Request', '25/06']],
+      history: [
+        { title: 'Chat 1 · 29/06 · 11:42', text: 'Customer reported a missing donation transaction of £450. Agent verified account details and submitted an inquiry.', tag: 'Initiate Dispute' },
+        { title: 'Chat 2 · 30/06 · 09:18', text: 'Customer requested a status update. Agent confirmed the dispute is in pending review and shared the expected processing window.', tag: 'Posted Transaction Inquiry' },
+        { title: 'Call · 25/06 · 15:05', text: 'Customer asked for a refund of an overdraft fee. Agent submitted a one-time courtesy refund request.', tag: 'Initiate Fee Refund Request' }
+      ]
+    },
+    jo: {
+      summary: {
+        title: 'Posted Transaction Inquiry',
+        meta: '1 April, 09:20, 10 min',
+        problem: 'Customer reported an unrecognised Bramblemart Marketplace charge.',
+        action: 'Customer shared the merchant label and amount from their statement.',
+        agentAction: 'Agent validated account activity and initiated a posted transaction inquiry.',
+        result: 'Inquiry is in progress. Customer will receive updates once the merchant review is complete.'
+      },
+      priorRows: [['Posted Transaction Inquiry', '02/07'], ['Card Replacement', '14/05']],
+      history: [
+        { title: 'Chat 1 · 02/07 · 14:10', text: 'Customer queried a small card charge. Agent explained merchant descriptors and the customer recognised the purchase.', tag: 'Posted Transaction Inquiry' },
+        { title: 'Call · 14/05 · 10:47', text: 'Customer reported a damaged card. Agent ordered a replacement with expedited delivery.', tag: 'Card Replacement' }
+      ]
+    },
+    sam: {
+      summary: {
+        title: 'Travel Notice',
+        meta: '12 March, 16:40, 6 min',
+        problem: 'Customer was travelling to Canada and wanted to avoid card declines.',
+        action: 'Customer provided travel dates and destination.',
+        agentAction: 'Agent added a travel notice to the debit card for the dates provided.',
+        result: 'Travel notice active for the trip. No declines were reported.'
+      },
+      priorRows: [['Travel Notice', '12/03']],
+      history: [
+        { title: 'Chat 1 · 12/03 · 16:40', text: 'Customer asked to add a travel notice for a trip to Canada. Agent added the notice for the requested dates.', tag: 'Travel Notice' }
+      ]
+    }
+  };
+
+  /* Customer auto-replies — matched in order, never moving backwards */
+  const customerReplies = {
+    nina: [
+      { match: /\bhi\b|\bhello\b|\bgood\b|my name is|how can i|how may i|pleased to|nice to|welcome/i,
+        text: "Thanks for getting in touch. As I mentioned, I made a £450 donation last month but the charity has no record of receiving it. I'm hoping you can help me look into this?" },
+      { match: /statement|reference|detail|confirm|transaction|amount|tell me more|look into|check|verify|share|could you|provide|date/i,
+        text: "Yes, it's showing as a completed debit on my statement. The reference is MB-DEMO-0328 and I have the charity's email confirming they never received the donation." },
+      { match: /disput|raise|initiat|file|proceed|provisional|credit|chargeback|on your behalf/i,
+        text: 'Yes please, go ahead and initiate the dispute. How long will it take and will the £450 be credited back in the meantime?' },
+      { match: /day|week|business|merchant|reference|email|notify|track|submit|sent/i,
+        text: "That's great to know. Will I get a reference number I can use to track the dispute?" },
+      { match: /submitt|done|complet|confirm|reference number|anything else|further|concern/i,
+        text: 'Perfect. I really appreciate you sorting this out so quickly. Is there anything I need to do from my end?' },
+      { match: /.*/,
+        text: "Understood. I'll keep an eye on my account. Thank you so much for your help today." }
+    ],
+    jo: [
+      { match: /\bhi\b|\bhello\b|\bgood\b|my name is|how can i|how may i|pleased to|nice to|welcome/i,
+        text: "Thanks for responding. I have a charge on my account I don't recognise — it says BRMBL*MKTPLACE for £34.99 and I have no idea what it's for." },
+      { match: /detail|confirm|charge|amount|statement|recogni|look into|check|verify|share|could you|provide|date|brmbl|bramblemart|subscription/i,
+        text: "No, I'm the only one who uses my account and I've already checked — no subscriptions, no digital purchases, nothing for £34.99. This is completely unrecognised." },
+      { match: /disput|investig|flag|unauthori|unrecogni|file|proceed|provisional|log|raise/i,
+        text: 'Yes please, go ahead. How long will the investigation take and what happens if the charge turns out to be fraudulent?' },
+      { match: /day|week|business|credit|refund|provisional|appear|account|£34/i,
+        text: "That's reassuring. Will the provisional credit show straight away or does it take a few days to appear?" },
+      { match: /email|confirm|notif|update|send|resolv|reference/i,
+        text: 'And will I get an email confirmation once the dispute is resolved?' },
+      { match: /.*/,
+        text: 'Wonderful, thank you so much. You\'ve been very helpful.' }
+    ],
+    sam: [
+      { match: /\bhi\b|\bhello\b|confirm|verify|last 4|digits|transaction|restaurant|security|purchase/i,
+        text: "Sure — it's the card ending 4821, and yes, that was me. Dinner at a restaurant in Lisbon about twenty minutes ago." },
+      { match: /unfreez|unfroze|travel|notice|genuine|try again|working/i,
+        text: "Brilliant, that's working now — the payment just went through. I'm also heading to Madrid on Thursday, could you add Spain too?" },
+      { match: /spain|madrid|added|anything else|.*/i,
+        text: 'Perfect, thank you so much for sorting that so quickly!' }
+    ]
+  };
+
+  const FEEDBACK_REASONS = ['Wrong information', 'Out of date', 'Wrong tone', 'Other'];
+
+  /* Example source documents per suggestion stage. All invented for this prototype. */
+  const HELPFUL_LINKS = {
+    nina: [
+      ['Dispute handling guide', 'Disputes: evidence checklist'],
+      ['Provisional credit policy', 'Dispute handling guide', 'Merchant response timelines'],
+      ['Dispute status updates guide', 'Provisional credit policy']
+    ],
+    jo: [
+      ['Merchant descriptor lookup', 'Unrecognised payments guide'],
+      ['Unrecognised payments guide', 'Provisional credit policy', 'Account security advice'],
+      ['Dispute outcomes explained', 'Account security advice']
+    ],
+    sam: [
+      ['Card freeze and release guide', 'Identity check standards', 'Travel notice guide'],
+      ['Travel notice guide', 'Card freeze and release guide']
+    ]
+  };
+
+  /* Which suggestion stage a conversation has reached (index 1+; 0 is the default) */
+  const stageRules = {
+    nina: [null,
+      /ref-|ref \d|statement|charity.*email|email.*charity|yes please|go ahead|proceed|confirmed/,
+      /how long|credited back|reference number|when will|confirmation|7.?10/],
+    jo: [null,
+      /only me|only one|unrecognised|no subscription|no digital|nothing for|can.?t find|cannot find|don.?t recognise/,
+      /how long|investigation|fraudulent|take to|provisional|confirmation/],
+    sam: [null,
+      /4821|that was me|it was me|genuine/]
+  };
+
+  const aiData = {
+    nina: [
+      {
+        suggTitle: 'Acknowledge & Verify Transaction',
+        suggText: "I understand how concerning it must be to see a charge with no record on the charity's end. I can see your account — could you confirm whether the £450 appeared as a completed debit on your bank statement, and do you have a transaction reference or the charity's confirmation email?",
+        iqaAnswer: "When a charitable donation charge appears on a customer's statement but the recipient has no record, this falls under a disputed transaction. The cardholder has up to 60 days from the statement date to raise a dispute under card network rules. Key verification steps: confirm transaction reference, merchant name, and obtain the charity's written confirmation of non-receipt.",
+        clarif: {
+          questions: ['Which card was used for the donation — credit or debit?', 'Has the customer already contacted the charity directly to confirm non-receipt?'],
+          sources: ['Dispute Handling Procedure — Card Network Rules', 'Card dispute rules: quick reference', 'Charitable Donations: Non-Receipt Claims', 'Chargeback Reason Codes Guide'],
+          refinedAnswer: 'Based on the clarification: if a credit card was used, the customer has up to 60 days under card network chargeback rules. If debit, card scheme dispute rules also apply, with the 60-day dispute window from the statement date. Where the charity has confirmed non-receipt in writing, this significantly strengthens the chargeback — classify as "Services Not Received" and attach the charity\'s email as supporting evidence when filing.'
+        },
+        alts: [
+          { suggTitle: 'Request Statement Reference', suggText: 'Thank you for getting in touch, Nina. To look into this for you, could you share the exact amount, the date it appears on your statement, and the merchant name or reference shown? That will help me pull up the transaction on our end right away.' },
+          { suggTitle: 'Empathise & Reassure', suggText: "I completely understand how worrying this must be — especially when it's a charitable donation. Please don't worry, we'll get to the bottom of this together. Could you confirm the amount and approximate date of the transaction so I can locate it on your account?" }
+        ]
+      },
+      {
+        suggTitle: 'Initiate Dispute & Apply Provisional Credit',
+        suggText: "Thank you for confirming those details. I can see the £450 transaction under reference MB-DEMO-0328. Since the funds left your account but the charity has no record of receiving them, I'd like to initiate a formal dispute on your behalf and apply a provisional credit of £450 to your account within 1–3 working days while we investigate. Shall I proceed?",
+        iqaAnswer: 'Dispute process: 1) Provisional credit applied within 1–3 working days. 2) Merchant notified and has up to 30 days to respond. 3) If merchant cannot substantiate receipt of funds, credit becomes permanent. 4) Customer receives written confirmation within 10 working days of final decision. Charity email confirming non-receipt strengthens the dispute case.',
+        clarif: {
+          questions: ["Does the customer have the charity's written confirmation of non-receipt?", 'Is the customer seeking a provisional credit or just a formal dispute reference?'],
+          sources: ['Provisional Credit Policy', 'Dispute Evidence Checklist', 'Merchant Response Timelines'],
+          refinedAnswer: 'With written confirmation of non-receipt from the charity, the dispute is strong — attach it as evidence when filing. If the customer wants provisional credit: apply within 1–3 working days and inform them it will become permanent if the merchant fails to respond within 30 days. If they only need a reference: raise the dispute formally, issue the reference by email within 30 minutes, and advise the full resolution timeline of 7–10 working days after the merchant responds.'
+        },
+        alts: [
+          { suggTitle: 'File Dispute — Formal Tone', suggText: "Based on the information provided, I've verified the £450 debit on your account dated 28 March under reference MB-DEMO-0328. As the merchant has no record of receipt, I will now raise a formal chargeback dispute on your behalf. A provisional credit will be applied to your account within 1–3 working days pending resolution." },
+          { suggTitle: 'Offer Dispute Options', suggText: "I can see the transaction on our end, Nina. You have two options: I can raise a dispute directly with the merchant on your behalf, or if you'd prefer, I can escalate this to our specialist disputes team who handle charitable donation cases specifically. Which would you prefer?" }
+        ]
+      },
+      {
+        suggTitle: 'Confirm Dispute Submission & Next Steps',
+        suggText: "The dispute has been submitted and your provisional credit of £450 will appear within 1–3 working days. Your dispute reference number will be emailed to you within 30 minutes. We aim to fully resolve this within 7–10 working days of the merchant's response. We'll notify you at every stage — is there anything else I can help you with today?",
+        iqaAnswer: 'Post-dispute submission checklist: Provisional credit: 1–3 working days. Dispute reference sent by email: within 30 minutes. Merchant response window: up to 30 days. Final resolution: within 10 working days of merchant response. If upheld, provisional credit becomes permanent. Customer should monitor their account and report any further discrepancies.',
+        clarif: null,
+        alts: [
+          { suggTitle: 'Brief Summary & Close', suggText: "All done, Nina. Dispute raised, provisional credit of £450 coming in 1–3 working days, reference number on its way to your email. You'll hear from us within 7–10 working days once the merchant responds. Nothing else needed from your side — is there anything else I can help with?" },
+          { suggTitle: 'Set Expectations & Reassure', suggText: "Just to set expectations: your £450 provisional credit will appear within 1–3 working days so you won't be out of pocket during the investigation. The merchant has 30 days to respond and we target full resolution within 7–10 working days after that. We'll keep you updated every step of the way." }
+        ]
+      }
+    ],
+    jo: [
+      {
+        suggTitle: 'Clarify the BRMBL*MKTPLACE Charge',
+        suggText: '"BRMBL*MKTPLACE" is the descriptor Bramblemart uses for marketplace purchases — it can appear from a saved payment method, a digital subscription (e-books, audiobooks), or a family member\'s order. Could you confirm whether anyone else has access to your Bramblemart account, or whether you have any active subscriptions that might explain this £34.99 charge?',
+        iqaAnswer: '"BRMBL*MKTPLACE" refers to Bramblemart Marketplace third-party seller purchases. Common causes: a shared household account, digital media subscriptions (e-books, audiobooks, streaming add-ons), one-click purchases, or pre-orders. Agent should check for linked accounts before proceeding to dispute. If the charge is unexplained after a full account review, classify as unrecognised and file a dispute.',
+        clarif: {
+          questions: ["Does anyone else have access to the customer's Bramblemart account or linked payment method?", 'Has the customer checked their Bramblemart order history and active subscriptions?'],
+          sources: ['Merchant Descriptor Lookup — Bramblemart', 'Unrecognised Transaction Procedure', 'Account Takeover Indicators', 'Customer Self-Service: Subscriptions', 'Chargeback Reason Codes Guide'],
+          refinedAnswer: 'Clarification confirms: no shared account access and order/subscription history has been fully checked with no match found. Proceed to classify as an unrecognised transaction. Recommend the customer secure their Bramblemart account (change password, enable 2-step verification) as a precaution. File the chargeback using reason code: Unrecognised Transaction. Apply provisional credit within 1–3 working days.'
+        },
+        alts: [
+          { suggTitle: 'Request Charge Details', suggText: 'Happy to help you look into that, Jo. Could you share the exact amount shown, the date of the charge, and the full merchant label as it appears on your statement? That will help me pull up the transaction and cross-reference it straight away.' },
+          { suggTitle: 'Check Bramblemart Account Together', suggText: "I'd like to help you identify this charge. \"BRMBL*MKTPLACE\" charges can sometimes come from a digital subscription renewing quietly in the background — an e-book or audiobook plan, for example. Could you log into your Bramblemart account and check Order History and Memberships & Subscriptions while we're on the chat?" }
+        ]
+      },
+      {
+        suggTitle: 'Log as Unrecognised & Apply Provisional Credit',
+        suggText: "Since you've thoroughly checked your account and cannot identify this £34.99 charge, I'm going to log this as an unrecognised transaction and flag it for our disputes team. I'll apply a provisional credit of £34.99 to your account within 1–3 working days while we investigate. I'll also send you a dispute reference number for your records.",
+        iqaAnswer: 'For unrecognised Bramblemart charges after full account verification: 1) Classify as unauthorised transaction. 2) Apply provisional credit in line with the bank\'s dispute policy (typically within 1–3 working days). 3) Submit chargeback using reason code: Unrecognised Transaction. 4) Bramblemart has up to 30 days to respond. If confirmed fraudulent, permanent credit applied.',
+        clarif: {
+          questions: ['Is this a debit card or credit card charge?', 'Has the customer changed their Bramblemart password or secured their account since noticing this charge?'],
+          sources: ['Card dispute rules: quick reference', 'Provisional Credit Policy', 'Fraud Prevention Advice Script', 'Card Network Dispute Windows'],
+          refinedAnswer: 'Clarification-based guidance: for a debit or credit card charge, card scheme dispute rules apply, with the 60-day dispute window from the statement date. Under the bank\'s example policy, provisional credit is applied within 1–3 working days while the investigation runs. If the account has not yet been secured, advise the customer to change their Bramblemart password and enable 2FA before closing the chat to prevent repeat occurrences.'
+        },
+        alts: [
+          { suggTitle: 'Escalate as Potential Fraud', suggText: "Since you've confirmed this charge is completely unrecognised and your account details are secure, I'm going to flag this as a potentially fraudulent transaction. I'll block any further unauthorised charges, apply a provisional credit of £34.99, and refer the case to our fraud investigation team. Is that okay?" },
+          { suggTitle: 'File Dispute — Formal Tone', suggText: "I've completed the account review and can confirm this £34.99 BRMBL*MKTPLACE charge cannot be substantiated against your order or subscription history. I will now raise a formal unrecognised transaction dispute. A provisional credit will be applied within 1–3 working days and a dispute reference issued to your registered email." }
+        ]
+      },
+      {
+        suggTitle: 'Confirm Investigation Timeline & Outcome',
+        suggText: "The dispute investigation typically takes 5–7 working days. If the charge is confirmed as unauthorised or fraudulent, the provisional credit of £34.99 becomes permanent with no further action needed from you. You'll receive email updates at each stage and your dispute reference number has been sent. Is there anything else I can help with today?",
+        iqaAnswer: 'Dispute outcome scenarios: (1) Charge confirmed unauthorised → provisional credit made permanent, case closed. (2) Merchant provides valid evidence → provisional credit reversed, customer notified. (3) No merchant response within 30 days → credit made permanent by default. Customer should report any further suspicious activity immediately via the fraud hotline.',
+        clarif: null,
+        alts: [
+          { suggTitle: 'Brief Summary & Close', suggText: "All sorted, Jo. Dispute is filed, provisional credit of £34.99 is on its way in 1–3 working days, and your reference number has been emailed. We'll have a final answer within 5–7 working days. Nothing more needed from you — is there anything else I can help with?" },
+          { suggTitle: 'Fraud Advisory & Next Steps', suggText: "As a precaution, I'd also recommend reviewing your Bramblemart account password and enabling two-step verification if you haven't already. If any further unrecognised charges appear in the meantime, please contact us straight away and we'll act immediately. Your dispute reference is on its way to your email now." }
+        ]
+      }
+    ],
+    sam: [
+      {
+        suggTitle: 'Verify & Explain the Freeze',
+        suggText: "I'm sorry your card was declined while you're travelling, Sam. I can see a security freeze was placed after a transaction in Portugal. For your security, could you confirm the last 4 digits of the card and whether you made a purchase at that restaurant today?",
+        iqaAnswer: 'Cards are automatically frozen when a transaction triggers fraud rules — commonly first use in a new country without a travel notice. Verify identity (last 4 digits plus a security question) before unfreezing. If the customer confirms the transaction, mark it as genuine, unfreeze the card, and add a travel notice covering the trip dates.',
+        clarif: {
+          questions: ['Has the customer confirmed the declined transaction as genuine?', "What are the customer's travel dates and destination countries?"],
+          sources: ['Fraud Freeze Release Procedure', 'Travel Notice Policy', 'Identity Verification Standards'],
+          refinedAnswer: 'With the transaction confirmed as genuine: release the fraud freeze, mark the transaction as customer-verified so it can be retried, and add a travel notice for every country and date given. Advise the customer that a declined transaction may need to be retried at the merchant, and that pending authorisations from the decline will drop off within 1–3 working days.'
+        },
+        alts: [
+          { suggTitle: 'Reassure First', suggText: "Don't worry Sam, this is a security measure and it's quick to fix. I just need to verify a couple of details and we'll get your card working again so you can carry on enjoying your trip." }
+        ]
+      },
+      {
+        suggTitle: 'Unfreeze Card & Add Travel Notice',
+        suggText: "Thanks for confirming, Sam. I've marked the transaction as genuine and unfrozen your card — you can try the payment again now. I've also added a travel notice for Portugal until the 13th so you shouldn't see further declines. Is there anywhere else you'll be travelling?",
+        iqaAnswer: 'After a verified freeze release: confirm the card status is Active, add a travel notice for all destinations and dates, and remind the customer that a declined payment needs to be retried at the merchant. Any pending authorisation from the decline drops off automatically within 1–3 working days.',
+        clarif: null,
+        alts: [
+          { suggTitle: 'Add Additional Countries', suggText: "Of course — I've added Spain to your travel notice as well, covering Thursday through the end of your trip. You're all set for both countries now. Is there anything else I can help with?" }
+        ]
+      }
+    ]
+  };
+
+  /* ════════════════════════════════════════════════════════════════
+     Scheduling per contact (so timers stop if the chat ends)
+     ════════════════════════════════════════════════════════════════ */
+  function schedule(id, ms, fn) {
+    const c = contacts[id];
+    const t = setTimeout(() => {
+      c.timeouts = c.timeouts.filter(x => x !== t);
+      fn();
+    }, ms);
+    c.timeouts.push(t);
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     Agent Desk queue
+     ════════════════════════════════════════════════════════════════ */
+  function renderQueue() {
+    const q = $('deskQueue');
+    if (!order.length) {
+      q.innerHTML = '<div class="queue-empty">No active contacts</div>';
+      return;
+    }
+    q.innerHTML = order.map(id => {
+      const c = contacts[id];
+      const selected = id === activeId && c.status !== 'incoming';
+      const cls = ['call-card'];
+      if (c.status === 'connected' || c.status === 'ended') cls.push('active');
+      if (c.status === 'incoming') cls.push('incoming');
+      if (c.status === 'ended') cls.push('ended');
+      if (selected) cls.push('selected');
+      const iconCls = c.status === 'incoming' ? 'chat-incoming' : selected ? 'chat-selected' : 'chat-active';
+      const label = c.status === 'incoming' ? 'Incoming Chat' : c.status === 'ended' ? 'Chat ended' : 'Connected Chat';
+      const badge = (!selected && c.unread) ? `<span class="unread-badge">${c.unread}</span>` : '';
+      const actions = c.status === 'incoming'
+        ? `<div class="incoming-actions"><button class="btn-accept" type="button" data-accept="${id}">Accept</button><button class="btn-decline" type="button" data-decline="${id}">Decline</button></div>`
+        : '';
+      return `<article class="${cls.join(' ')}" data-contact="${id}">
+        <span class="call-icon ${iconCls}" aria-hidden="true">${CHAT_ICON}</span>
+        <div class="call-card-body">
+          <div class="name">${esc(c.name)}</div>
+          <div class="meta"><span>${label}</span><span id="timer-${id}">${fmt(c.seconds)}</span></div>
+          ${actions}
+        </div>
+        ${badge}
+      </article>`;
+    }).join('');
+  }
+
+  $('deskQueue').addEventListener('click', (e) => {
+    const accept = e.target.closest('[data-accept]');
+    if (accept) { acceptContact(accept.dataset.accept); return; }
+    const decline = e.target.closest('[data-decline]');
+    if (decline) { declineContact(decline.dataset.decline); return; }
+    const card = e.target.closest('.call-card');
+    if (!card) return;
+    const c = contacts[card.dataset.contact];
+    if (c.status === 'incoming') {
+      if (shell.classList.contains('collapsed')) toggleBtn.click();
+      return;
+    }
+    selectContact(c.id);
+  });
+
+  function offerIncoming(id) {
+    const c = contacts[id];
+    c.status = 'incoming';
+    c.seconds = 0;
+    order.push(id);
+    renderQueue();
+    $('notifBtn').classList.add('has-dot');
+    toast(`Incoming chat from ${c.name}`);
+  }
+
+  function acceptContact(id) {
+    const c = contacts[id];
+    c.status = 'connected';
+    c.seconds = 0;
+    $('notifBtn').classList.remove('has-dot');
+    selectContact(id);
+  }
+
+  function declineContact(id) {
+    order = order.filter(x => x !== id);
+    contacts[id].status = 'declined';
+    $('notifBtn').classList.remove('has-dot');
+    renderQueue();
+    toast(`Declined chat from ${contacts[id].name}`);
+  }
+
+  function selectContact(id) {
+    const c = contacts[id];
+    const prev = contacts[activeId];
+    if (prev) prev.draft = $('liveChatInput').value;
+    $('liveChatInput').value = c.draft;
+    activeId = id;
+    c.unread = 0;
+    renderAll();
+    resetIqa();
+    if (!c.started) startChat(id);
+  }
+
+  function renderAll() {
+    renderQueue();
+    renderLiveChat();
+    renderPriorSummary();
+    renderSuggestions();
+    renderHistory();
+    renderResponses();
+    renderIqaQuick();
+    const c = contacts[activeId];
+    $('contextLabel').textContent = c ? `Assisting: ${c.name}` : '';
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     Live chat
+     ════════════════════════════════════════════════════════════════ */
+  function messageHTML(c, m, isNew) {
+    if (m.role === 'system') return `<div class="lc-system">${esc(m.text)}</div>`;
+    const isCustomer = m.role === 'customer';
+    const dir = isCustomer ? 'incoming' : 'outgoing';
+    const initials = isCustomer ? c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : AGENT.initials;
+    const sender = isCustomer ? c.first : `${AGENT.name} (you)`;
+    const receipt = isCustomer ? '' : `<div class="lc-read-receipt"><svg width="13" height="10" viewBox="0 0 16 12" fill="none"><path d="M1 6l4 4L15 1" stroke="#5f6b7a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 6l4 4" stroke="#5f6b7a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Read</div>`;
+    return `<div class="lc-bubble-row ${dir}${isNew ? ' new' : ''}">
+      <div class="lc-meta"><div class="lc-avatar ${dir}">${initials}</div><span class="lc-sender">${esc(sender)}</span><span class="lc-time">${m.time}</span></div>
+      <div class="lc-bubble ${isCustomer ? 'from-customer' : 'from-agent'}">${esc(m.text)}</div>${receipt}
+    </div>`;
+  }
+
+  function renderLiveChat() {
+    const c = contacts[activeId];
+    const msgs = $('liveChatMsgs');
+    const input = $('liveChatInput');
+    const endBtn = $('endChatBtn');
+    const strip = $('activeStrip');
+
+    if (!c) {
+      $('activeStripName').textContent = 'No contact selected';
+      $('activeStripSub').textContent = 'Waiting for chats';
+      $('liveChatTimer').textContent = '';
+      strip.classList.add('ended');
+      msgs.innerHTML = `<div class="live-chat-empty">${agentStatus === 'available' ? 'You\'re available. New chats will appear above.' : 'Set your status to Available to receive chats.'}</div>`;
+      input.disabled = true;
+      $('lcSendBtn').disabled = true;
+      endBtn.style.display = 'none';
+      return;
+    }
+
+    const ended = c.status === 'ended';
+    $('activeStripName').textContent = c.name;
+    $('activeStripSub').textContent = ended ? 'Chat ended · After contact work' : 'Connected Chat';
+    $('liveChatTimer').textContent = fmt(c.seconds);
+    strip.classList.toggle('ended', ended);
+
+    let html = c.messages.map((m, i) => messageHTML(c, m, i >= c.rendered)).join('');
+    c.rendered = c.messages.length;
+    if (c.typing) {
+      html += `<div class="lc-bubble-row incoming"><div class="lc-meta"><span class="lc-sender">${esc(c.first)} is typing</span></div>
+        <div class="lc-typing-bubble"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div></div>`;
+    }
+    msgs.innerHTML = html;
+    msgs.scrollTop = msgs.scrollHeight;
+
+    input.disabled = ended;
+    $('lcSendBtn').disabled = ended;
+    input.placeholder = ended ? 'This chat has ended' : 'Type a message…';
+    endBtn.style.display = '';
+    endBtn.textContent = ended ? 'Close Contact' : 'End Chat';
+    endBtn.classList.toggle('close', ended);
+  }
+
+  function addMessage(id, msg) {
+    const c = contacts[id];
+    c.messages.push({ ...msg, time: nowTime() });
+    if (id === activeId) {
+      renderLiveChat();
+    } else if (msg.role === 'customer') {
+      c.unread++;
+      renderQueue();
+    }
+    if (msg.role === 'customer') updateAi(id);
+  }
+
+  function startChat(id) {
+    const c = contacts[id];
+    c.started = true;
+    const text = openingMessages[id];
+    c.typing = true;
+    if (id === activeId) renderLiveChat();
+    schedule(id, 1200 + Math.min(text.length * 12, 1400), () => {
+      c.typing = false;
+      addMessage(id, { role: 'customer', text });
+    });
+  }
+
+  function pickCustomerReply(id, agentText) {
+    const c = contacts[id];
+    const stages = customerReplies[id];
+    if (!stages || c.replyStage >= stages.length) return null;
+    for (let i = c.replyStage; i < stages.length; i++) {
+      if (stages[i].match.test(agentText)) {
+        c.replyStage = i + 1;
+        return stages[i].text;
+      }
+    }
+    const text = stages[c.replyStage].text;
+    c.replyStage++;
+    return text;
+  }
+
+  function triggerCustomerReply(id, agentText) {
+    const c = contacts[id];
+    const reply = pickCustomerReply(id, agentText);
+    if (!reply) return;
+    schedule(id, 700, () => {
+      c.typing = true;
+      if (id === activeId) renderLiveChat();
+    });
+    schedule(id, 700 + 900 + Math.min(reply.length * 15, 1500), () => {
+      c.typing = false;
+      addMessage(id, { role: 'customer', text: reply });
+    });
+  }
+
+  function sendLiveMessage() {
+    const input = $('liveChatInput');
+    const text = input.value.trim();
+    const c = contacts[activeId];
+    if (!text || !c || c.status !== 'connected') return;
+    input.value = '';
+    addMessage(c.id, { role: 'agent', text });
+    triggerCustomerReply(c.id, text);
+  }
+
+  function insertIntoChat(text) {
+    const c = contacts[activeId];
+    if (!c || c.status !== 'connected') { toast('Select a connected chat first'); return; }
+    const input = $('liveChatInput');
+    input.value = text;
+    input.focus();
+    input.setSelectionRange(text.length, text.length);
+    if (shell.classList.contains('collapsed')) toggleBtn.click();
+    toast('Added to the chat box — press Enter to send');
+  }
+
+  $('lcSendBtn').addEventListener('click', sendLiveMessage);
+  $('liveChatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendLiveMessage(); }
+  });
+
+  $('endChatBtn').addEventListener('click', () => {
+    const c = contacts[activeId];
+    if (!c) return;
+    if (c.status === 'connected') {
+      c.timeouts.forEach(clearTimeout);
+      c.timeouts = [];
+      c.typing = false;
+      c.status = 'ended';
+      c.messages.push({ role: 'system', text: `Chat ended by ${AGENT.name} · ${nowTime()}`, time: nowTime() });
+      renderQueue();
+      renderLiveChat();
+      toast(`Chat with ${c.name} ended`);
+    } else {
+      order = order.filter(x => x !== c.id);
+      const next = order.find(x => contacts[x].status === 'connected') || order.find(x => contacts[x].status === 'ended') || null;
+      activeId = next;
+      $('liveChatInput').value = next ? contacts[next].draft : '';
+      if (next) contacts[next].unread = 0;
+      renderAll();
+      resetIqa();
+      toast(`Contact with ${c.name} closed`);
+    }
+  });
+
+  /* ════════════════════════════════════════════════════════════════
+     AI Assistant: prior summary
+     ════════════════════════════════════════════════════════════════ */
+  function renderPriorSummary() {
+    const el = $('priorSummary');
+    const c = contacts[activeId];
+    if (!c) { el.innerHTML = '<div class="sugg-placeholder">Select a contact to see their history.</div>'; return; }
+    const p = profiles[c.id];
+    const s = p.summary;
+    el.innerHTML = `<div class="history">
+      <div class="history-row"><strong>Prior Summary</strong><button class="link-btn strong" type="button" id="summaryToggle">${c.summaryOpen ? 'View less' : 'View more'}</button></div>
+      <div class="summary-detail${c.summaryOpen ? ' open' : ''}">
+        <div><div class="sd-title">${esc(s.title)}</div><div class="sd-meta">${esc(s.meta)}</div></div>
+        <dl style="margin:0">
+          <dt>Problem</dt><dd>${esc(s.problem)}</dd>
+          <dt>Customer action</dt><dd>${esc(s.action)}</dd>
+          <dt>Agent action</dt><dd>${esc(s.agentAction)}</dd>
+          <dt>Result</dt><dd>${esc(s.result)}</dd>
+        </dl>
+      </div>
+      ${p.priorRows.map(([label, date]) => `<div class="history-row"><button class="link-btn" type="button" data-open-history>${esc(label)}</button><span>${date}</span></div>`).join('')}
+    </div>`;
+  }
+
+  $('priorSummary').addEventListener('click', (e) => {
+    const c = contacts[activeId];
+    if (!c) return;
+    if (e.target.closest('#summaryToggle')) {
+      c.summaryOpen = !c.summaryOpen;
+      renderPriorSummary();
+    } else if (e.target.closest('[data-open-history]')) {
+      $('tabHistory').click();
+    }
+  });
+
+  /* ════════════════════════════════════════════════════════════════
+     AI Assistant: suggested next best response
+     ════════════════════════════════════════════════════════════════ */
+  function pickAiIndex(id) {
+    const c = contacts[id];
+    const rules = stageRules[id] || [];
+    const full = c.messages.filter(m => m.role === 'customer').map(m => m.text.toLowerCase()).join(' ');
+    for (let i = rules.length - 1; i >= 1; i--) {
+      if (rules[i] && rules[i].test(full) && !c.aiShown.has(i)) return i;
+    }
+    if (!c.aiShown.has(0)) return 0;
+    return c.aiIndex;
+  }
+
+  function updateAi(id) {
+    const c = contacts[id];
+    const next = pickAiIndex(id);
+    if (next === c.aiIndex) return;
+    c.aiIndex = next;
+    c.aiShown.add(next);
+    c.aiThinking = true;
+    if (id === activeId) renderSuggestions();
+    setTimeout(() => {
+      c.aiThinking = false;
+      if (id === activeId) renderSuggestions(true);
+    }, 1400);
+  }
+
+  function personalize(text) {
+    const c = contacts[activeId];
+    return text.replace(/\{name\}/g, c ? c.first : 'there');
+  }
+
+  function renderSuggestions(animate) {
+    const el = $('suggestionCard');
+    const c = contacts[activeId];
+    if (!c) { el.innerHTML = '<div class="sugg-placeholder">No active contact.</div>'; return; }
+    if (c.aiThinking) { el.innerHTML = thinkingHTML(); return; }
+    if (c.aiIndex === null) {
+      el.innerHTML = '<div class="sugg-placeholder">Suggestions will appear once the customer sends a message.</div>';
+      return;
+    }
+    const data = aiData[c.id][c.aiIndex];
+    const cards = [{ suggTitle: data.suggTitle, suggText: data.suggText }, ...(data.alts || [])];
+    const links = (HELPFUL_LINKS[c.id] || [])[c.aiIndex] || [];
+    el.innerHTML = cards.map((card, i) => `
+      <div class="suggestion-card${i === 0 ? ' primary' : ''}${i === 0 && animate ? ' ai-updated' : ''}" data-sugg="${i}">
+        <div class="suggestion-title-row">
+          <button class="suggestion-title-label" type="button" data-toggle-sugg aria-expanded="true">
+            <img src="${CHEVRON_DOWN}" alt="" aria-hidden="true"/>
+            ${esc(card.suggTitle)}
+            ${i === 0 ? '<span class="best-tag">Best match</span>' : ''}
+          </button>
+          <div class="sugg-actions">
+            <button class="copy-btn" type="button" data-copy-sugg>Copy</button>
+            <button class="copy-btn" type="button" data-use-sugg>Use</button>
+            <button class="copy-btn subtle" type="button" data-nothelpful aria-expanded="false">Not helpful?</button>
+          </div>
+        </div>
+        <div class="sugg-feedback" hidden>
+          <span>What was wrong?</span>
+          ${FEEDBACK_REASONS.map(r => `<button type="button" class="reason-chip" data-reason>${r}</button>`).join('')}
+        </div>
+        <div class="suggestion-body">
+          <div class="suggestion-text-shell">
+            <div class="suggestion-text-wrap"><p class="suggestion-text">${esc(card.suggText)}</p></div>
+            <div class="text-fade"></div>
+          </div>
+          <span class="helpful-links-label">Helpful Links · examples</span>
+          <div class="link-chips">${links.map(l => `<span class="link-chip" tabindex="0" title="Example document made up for this prototype. Not a real source.">${esc(l)}</span>`).join('')}</div>
+        </div>
+      </div>`).join('');
+    el._cards = cards;
+    bindScrollFades(el);
+  }
+
+  $('suggestionCard').addEventListener('click', (e) => {
+    const el = $('suggestionCard');
+    const cardEl = e.target.closest('.suggestion-card');
+    if (!cardEl) return;
+    const card = el._cards[Number(cardEl.dataset.sugg)];
+    if (e.target.closest('[data-toggle-sugg]')) {
+      const collapsed = cardEl.classList.toggle('collapsed');
+      e.target.closest('[data-toggle-sugg]').setAttribute('aria-expanded', String(!collapsed));
+      updateScrollFades(el);
+    } else if (e.target.closest('[data-copy-sugg]')) {
+      const btn = e.target.closest('[data-copy-sugg]');
+      copyText(card.suggText);
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    } else if (e.target.closest('[data-use-sugg]')) {
+      insertIntoChat(card.suggText);
+    } else if (e.target.closest('[data-nothelpful]')) {
+      const btn = e.target.closest('[data-nothelpful]');
+      const fb = cardEl.querySelector('.sugg-feedback');
+      fb.hidden = !fb.hidden;
+      btn.setAttribute('aria-expanded', String(!fb.hidden));
+    } else if (e.target.closest('[data-reason]')) {
+      /* Front-end only: the choice is not stored or sent anywhere */
+      cardEl.querySelector('.sugg-feedback').innerHTML = '<span class="sugg-feedback-done">Thanks, noted</span>';
+      cardEl.querySelector('[data-nothelpful]').remove();
+      cardEl.classList.add('collapsed');
+      cardEl.querySelector('[data-toggle-sugg]').setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  /* ── Scroll fades (suggestion + IQA text areas) ── */
+  function syncFade(shellEl) {
+    const wrap = shellEl.querySelector('.suggestion-text-wrap, .iqa-text-wrap');
+    const fade = shellEl.querySelector('.text-fade');
+    if (!wrap || !fade) return;
+    const overflow = wrap.scrollHeight - wrap.clientHeight > 1;
+    const atBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 2;
+    shellEl.classList.toggle('has-overflow', overflow);
+    fade.classList.toggle('hidden', !overflow || atBottom);
+  }
+
+  function bindScrollFades(root) {
+    root.querySelectorAll('.suggestion-text-shell, .iqa-text-shell').forEach(shellEl => {
+      const wrap = shellEl.querySelector('.suggestion-text-wrap, .iqa-text-wrap');
+      if (wrap) wrap.addEventListener('scroll', () => syncFade(shellEl));
+      syncFade(shellEl);
+    });
+  }
+
+  function updateScrollFades(root) {
+    (root || document).querySelectorAll('.suggestion-text-shell, .iqa-text-shell').forEach(syncFade);
+  }
+
+  function toggleAccordion(btn) {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    btn.nextElementSibling.classList.toggle('collapsed', expanded);
+    requestAnimationFrame(() => updateScrollFades());
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     Responses tab
+     ════════════════════════════════════════════════════════════════ */
+  const openResp = new Set();
+  let respFilter = 'all';
+  let respQuery = '';
+
+  function findRespItem(id) {
+    for (const cat of RESPONSES) for (const it of cat.items) if (it.id === id) return it;
+    return null;
+  }
+
+  function renderResponses() {
+    const list = $('respList');
+    const q = respQuery.trim().toLowerCase();
+    let html = '';
+    RESPONSES.forEach(cat => {
+      if (respFilter !== 'all' && cat.tag !== respFilter) return;
+      const items = cat.items.map(it => {
+        const msgs = it.messages.map((m, idx) => ({ text: personalize(m), idx }));
+        if (!q) return { it, msgs };
+        const titleHit = it.title.toLowerCase().includes(q);
+        const hits = titleHit ? msgs : msgs.filter(m => m.text.toLowerCase().includes(q));
+        return (titleHit || hits.length) ? { it, msgs: hits } : null;
+      }).filter(Boolean);
+      if (!items.length) return;
+      html += `<div class="resp-category-header"><span class="cat-title" title="${esc(cat.category)}">${esc(cat.category)}</span></div>`;
+      items.forEach(({ it, msgs }) => {
+        const open = q ? true : openResp.has(it.id);
+        html += `<div class="resp-item${open ? ' open' : ''}" data-resp="${it.id}" role="button" tabindex="0" aria-expanded="${open}">
+          <div class="resp-item-left">
+            <div class="resp-item-icon ${it.icon}"><img src="${ICONS[it.icon]}" alt="" width="28" height="28"></div>
+            <div class="resp-item-text">
+              <div class="resp-item-title">${esc(it.title)}</div>
+              ${it.sub ? `<div class="resp-item-sub">${esc(it.sub)}</div>` : ''}
+            </div>
+          </div>
+          <div class="resp-item-right">
+            <span class="resp-item-count">${msgs.length}</span>
+            <span class="resp-item-chevron"><img src="${CHEVRON_RIGHT}" alt="" style="width:12px;height:12px;display:block"></span>
+          </div>
+        </div>
+        <div class="resp-expand-panel${open ? ' open' : ''}">
+          ${msgs.map(m => `<div class="resp-expand-row" data-resp="${it.id}" data-idx="${m.idx}">
+            <div class="resp-expand-row-inner">
+              <span class="resp-expand-text" title="Click to add to the chat">${esc(m.text)}</span>
+              <div class="resp-row-actions">
+                <button class="resp-use-btn" type="button" data-use>Use</button>
+                <button class="resp-copy-btn" type="button" title="Copy" data-copy>${COPY_SVG}</button>
+              </div>
+            </div>
+          </div>`).join('')}
+        </div>`;
+      });
+    });
+    list.innerHTML = html || `<div class="resp-empty">No responses match "${esc(respQuery)}"</div>`;
+    initShowMore(list);
+  }
+
+  function initShowMore(root) {
+    requestAnimationFrame(() => {
+      root.querySelectorAll('.resp-expand-panel.open .resp-expand-text').forEach(el => {
+        const row = el.closest('.resp-expand-row');
+        if (row.querySelector('.resp-show-more')) return;
+        if (el.scrollHeight > el.clientHeight + 2) {
+          const btn = document.createElement('button');
+          btn.className = 'resp-show-more';
+          btn.type = 'button';
+          btn.textContent = 'Show more';
+          row.appendChild(btn);
+        }
+      });
+    });
+  }
+
+  function respTextFor(row) {
+    const it = findRespItem(row.dataset.resp);
+    return personalize(it.messages[Number(row.dataset.idx)]);
+  }
+
+  $('respList').addEventListener('click', (e) => {
+    const row = e.target.closest('.resp-expand-row');
+    if (row) {
+      if (e.target.closest('[data-copy]')) {
+        const btn = e.target.closest('[data-copy]');
+        copyText(respTextFor(row));
+        btn.style.opacity = '0.4';
+        setTimeout(() => { btn.style.opacity = ''; }, 800);
+        toast('Copied to clipboard');
+      } else if (e.target.closest('.resp-show-more')) {
+        const btn = e.target.closest('.resp-show-more');
+        const expanded = row.querySelector('.resp-expand-text').classList.toggle('expanded');
+        btn.textContent = expanded ? 'Show less' : 'Show more';
+      } else if (e.target.closest('[data-use]') || e.target.closest('.resp-expand-text')) {
+        insertIntoChat(respTextFor(row));
+      }
+      return;
+    }
+    const item = e.target.closest('.resp-item');
+    if (item) toggleRespItem(item);
+  });
+
+  $('respList').addEventListener('keydown', (e) => {
+    const item = e.target.closest('.resp-item');
+    if (item && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleRespItem(item); }
+  });
+
+  function toggleRespItem(item) {
+    const id = item.dataset.resp;
+    const panel = item.nextElementSibling;
+    const open = panel.classList.toggle('open');
+    item.classList.toggle('open', open);
+    item.setAttribute('aria-expanded', String(open));
+    if (open) openResp.add(id); else openResp.delete(id);
+    if (open) initShowMore(panel.parentElement);
+  }
+
+  $('respSearch').addEventListener('input', (e) => {
+    respQuery = e.target.value;
+    $('respSearchBox').classList.toggle('has-value', !!respQuery);
+    renderResponses();
+  });
+
+  $('respSearchClear').addEventListener('click', () => {
+    $('respSearch').value = '';
+    respQuery = '';
+    $('respSearchBox').classList.remove('has-value');
+    renderResponses();
+    $('respSearch').focus();
+  });
+
+  $('respFilters').addEventListener('click', (e) => {
+    const pill = e.target.closest('.resp-filter-pill');
+    if (!pill) return;
+    respFilter = pill.dataset.filter;
+    document.querySelectorAll('.resp-filter-pill').forEach(p => p.classList.toggle('active', p === pill));
+    renderResponses();
+  });
+
+  /* ════════════════════════════════════════════════════════════════
+     History tab
+     ════════════════════════════════════════════════════════════════ */
+  function renderHistory() {
+    const el = $('panelHistory');
+    const c = contacts[activeId];
+    if (!c) { el.innerHTML = '<div class="sugg-placeholder">No contact selected.</div>'; return; }
+    el.innerHTML = `<div style="font-size:13px; color:var(--muted);">Previous contacts with <strong style="color:var(--text)">${esc(c.name)}</strong></div>` +
+      profiles[c.id].history.map(h => `<div class="history-card">
+        <h4>${esc(h.title)}</h4>
+        <p>${esc(h.text)}</p>
+        <span class="history-tag">${esc(h.tag)}</span>
+      </div>`).join('');
+  }
+
+  const mainTabs = [
+    { btn: $('tabResponses'), panel: $('panelResponses') },
+    { btn: $('tabHistory'),   panel: $('panelHistory') }
+  ];
+  mainTabs.forEach(({ btn, panel }) => {
+    btn.addEventListener('click', () => {
+      mainTabs.forEach(({ btn: b, panel: p }) => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+        p.style.display = 'none';
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      panel.style.display = 'flex';
+    });
+  });
+
+  /* ════════════════════════════════════════════════════════════════
+     Assist Q&amp;A
+     ════════════════════════════════════════════════════════════════ */
+  let iqaToken = 0;
+
+  const quickQuestions = {
+    nina: ['What is the dispute window for a donation?', 'How long until provisional credit?'],
+    jo:  ['What does BRMBL*MKTPLACE mean?', 'How do I file an unrecognised charge?'],
+    sam:   ['Why was the card frozen?', 'How do I add a travel notice?']
+  };
+
+  function renderIqaQuick() {
+    const el = $('iqaQuick');
+    const c = contacts[activeId];
+    el.innerHTML = c ? quickQuestions[c.id].map(q => `<button type="button">${esc(q)}</button>`).join('') : '';
+  }
+
+  $('iqaQuick').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    $('iqaInput').value = b.textContent;
+    submitIqaQuestion();
+  });
+
+  function resetIqa() {
+    iqaToken++;
+    $('iqaBlock').innerHTML = '<div class="sugg-placeholder">Ask Assist a question about this contact — answers use the policies relevant to the conversation.</div>';
+    $('iqaClarifCard').style.display = 'none';
+    $('iqaClarifCard').innerHTML = '';
+    $('iqaClarifSources').style.display = 'none';
+    $('iqaSourcesList').style.display = 'none';
+  }
+
+  function expandIqa() {
+    const btn = $('iqaAccordionBtn');
+    if (btn.getAttribute('aria-expanded') === 'false') toggleAccordion(btn);
+  }
+
+  $('iqaNewBtn').addEventListener('click', () => { resetIqa(); $('iqaInput').value = ''; $('iqaInput').focus(); });
+  $('iqaSendBtn').addEventListener('click', submitIqaQuestion);
+  $('iqaInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitIqaQuestion(); }
+  });
+
+  function submitIqaQuestion() {
+    const input = $('iqaInput');
+    const question = input.value.trim();
+    if (!question) return;
+    const c = contacts[activeId];
+    if (!c) { toast('Select a contact first'); return; }
+    input.value = '';
+
+    const dataset = aiData[c.id];
+    const currentIdx = c.aiIndex === null ? 0 : c.aiIndex;
+    let data = dataset[currentIdx];
+    if (!data.clarif) {
+      for (let i = currentIdx - 1; i >= 0; i--) {
+        if (dataset[i].clarif) { data = { ...dataset[currentIdx], clarif: dataset[i].clarif }; break; }
+      }
+    }
+
+    const token = ++iqaToken;
+    const iqaBlock = $('iqaBlock');
+    const clarifCard = $('iqaClarifCard');
+    const clarifSources = $('iqaClarifSources');
+    const sourcesList = $('iqaSourcesList');
+
+    expandIqa();
+    clarifCard.style.display = 'none';
+    clarifCard.innerHTML = '';
+    clarifSources.style.display = 'none';
+    sourcesList.style.display = 'none';
+
+    const questionHTML = `<div class="iqa-question">${esc(question)}</div>`;
+    iqaBlock.innerHTML = questionHTML + thinkingHTML();
+
+    setTimeout(() => {
+      if (token !== iqaToken) return;
+      iqaBlock.innerHTML = questionHTML + `
+        <div class="iqa-header">
+          <div class="feedback-btns">
+            <button class="feedback-btn" type="button" title="Helpful" aria-label="Thumbs up" data-fb="up">
+              <svg class="cs-icon" viewBox="0 0 16 16"><path class="stroke-linejoin-round" d="M9 2.87V7H13.12C13.72 7 14.14 7.59 13.95 8.16L12.35 12.93C12.13 13.57 11.53 14 10.86 14H1V6H5L7.41 2.39C7.89 1.67 9 2.01 9 2.87Z"/><path class="stroke-linejoin-round" d="M5 14V6"/></svg>
+            </button>
+            <button class="feedback-btn" type="button" title="Not helpful" aria-label="Thumbs down" data-fb="down">
+              <svg class="cs-icon" viewBox="0 0 16 16"><path class="stroke-linejoin-round" d="M9 13.13V9H13.12C13.72 9 14.14 8.41 13.95 7.84L12.35 3.07C12.13 2.43 11.53 2 10.86 2H1V10H5L7.41 13.61C7.89 14.33 9 13.99 9 13.13Z"/><path class="stroke-linejoin-round" d="M5 2V10"/></svg>
+            </button>
+          </div>
+          <strong>Answer</strong>
+          <span class="ai-badge"><img src="${AI_SPARKLE}" alt="" aria-hidden="true"/>AI Generated</span>
+        </div>
+        <div class="iqa-text-shell">
+          <div class="iqa-text-wrap ai-updated"><p>${esc(data.iqaAnswer)}</p></div>
+          <div class="text-fade"></div>
+        </div>`;
+
+      iqaBlock.querySelectorAll('[data-fb]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const up = btn.dataset.fb === 'up';
+          const other = iqaBlock.querySelector(`[data-fb="${up ? 'down' : 'up'}"]`);
+          const on = btn.classList.toggle(up ? 'active-up' : 'active-down');
+          other.classList.remove('active-up', 'active-down');
+          if (on) toast(up ? 'Thanks — marked as helpful' : 'Thanks — we\'ll use this to improve answers');
+        });
+      });
+
+      bindScrollFades(iqaBlock);
+      if (!data.clarif) return;
+
+      /* View clarification toggle */
+      const viewBtn = document.createElement('button');
+      viewBtn.type = 'button';
+      viewBtn.className = 'view-clarif open';
+      viewBtn.innerHTML = `<span class="view-clarif-label"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#005EB8" stroke-width="1.5"/><path d="M8 5V8.5" stroke="#005EB8" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r="0.75" fill="#005EB8"/></svg>View Clarification</span>
+        <svg class="view-clarif-chevron" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#005EB8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      viewBtn.addEventListener('click', () => {
+        const showing = clarifCard.style.display !== 'none';
+        clarifCard.style.display = showing ? 'none' : 'flex';
+        clarifSources.style.display = showing ? 'none' : 'flex';
+        if (showing) { sourcesList.style.display = 'none'; clarifSources.classList.remove('open'); }
+        viewBtn.classList.toggle('open', !showing);
+      });
+      iqaBlock.appendChild(viewBtn);
+
+      /* Clarification steps */
+      const questions = data.clarif.questions;
+      const answers = [];
+
+      const answeredHTML = () => answers.map((a, i) => `<div class="clarif-answered-row">
+        <span class="clarif-answered-q">${esc(questions[i])}</span>
+        <span class="clarif-answered-a">${esc(a)}</span></div>`).join('');
+
+      function renderStep() {
+        const n = answers.length;
+        clarifCard.innerHTML = `
+          <div class="clarif-header">
+            <div class="clarif-title">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#005EB8" stroke-width="1.5"/><path d="M8 5V8.5" stroke="#005EB8" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r="0.75" fill="#005EB8"/></svg>
+              Clarification Needed
+              <span style="margin-left:auto;margin-right:8px;font:400 11px/16px 'Open Sans',sans-serif;color:#485c78">${n + 1} of ${questions.length}</span>
+            </div>
+            <button class="clarif-close" type="button" aria-label="Dismiss">&times;</button>
+          </div>
+          ${answeredHTML()}
+          <div class="clarif-q">${n + 1}. ${esc(questions[n])}</div>
+          <div class="clarif-input-row">
+            <input type="text" placeholder="Type your answer here…" aria-label="Clarification answer"/>
+            <button class="clarif-next-btn" type="button">${n < questions.length - 1 ? 'Next' : 'Done'}</button>
+          </div>`;
+        const cinput = clarifCard.querySelector('input');
+        const submit = () => {
+          const val = cinput.value.trim();
+          if (!val) { cinput.focus(); return; }
+          answers.push(val);
+          if (answers.length >= questions.length) renderDone(); else renderStep();
+        };
+        clarifCard.querySelector('.clarif-next-btn').addEventListener('click', submit);
+        cinput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+        clarifCard.querySelector('.clarif-close').addEventListener('click', () => viewBtn.click());
+        cinput.focus();
+      }
+
+      function renderDone() {
+        clarifCard.innerHTML = `<div class="clarif-done-header">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#1a7f4b" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#1a7f4b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Clarifications captured
+          </div>${answeredHTML()}`;
+        clarifCard.style.display = 'none';
+        clarifSources.style.display = 'none';
+        sourcesList.style.display = 'none';
+        viewBtn.classList.remove('open');
+        viewBtn.querySelector('.view-clarif-label').innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#1a7f4b" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#1a7f4b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>View Clarification`;
+
+        const wrap = iqaBlock.querySelector('.iqa-text-wrap');
+        if (!wrap) return;
+        wrap.classList.remove('ai-updated');
+        wrap.innerHTML = thinkingHTML();
+        setTimeout(() => {
+          if (token !== iqaToken) return;
+          wrap.innerHTML = `<p><strong style="color:#1a7f4b">Refined answer · </strong>${esc(data.clarif.refinedAnswer)}</p>`;
+          void wrap.offsetWidth;
+          wrap.classList.add('ai-updated');
+          updateScrollFades(iqaBlock);
+        }, 1200);
+      }
+
+      renderStep();
+      clarifCard.style.display = 'flex';
+      clarifCard.classList.add('ai-updated');
+
+      const sources = data.clarif.sources;
+      clarifSources.innerHTML = `<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#005EB8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Sources (${sources.length})`;
+      clarifSources.style.display = 'flex';
+      clarifSources.classList.remove('open');
+      clarifSources.onclick = () => {
+        const open = sourcesList.style.display === 'none';
+        sourcesList.style.display = open ? 'grid' : 'none';
+        clarifSources.classList.toggle('open', open);
+      };
+      sourcesList.innerHTML = sources.map(s => `<a href="#" onclick="event.preventDefault(); toast('Example document, not a real source: ${esc(s).replace(/'/g, '&#39;')}')">${esc(s)}</a>`).join('');
+    }, 1400);
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     Agent status
+     ════════════════════════════════════════════════════════════════ */
+  const STATUS_LABELS = { available: 'Available', break: 'Break', offline: 'Offline' };
+
+  function renderStatus() {
+    const pill = $('statusPill');
+    pill.className = 'status-pill' + (agentStatus === 'available' ? '' : ' ' + agentStatus);
+    pill.innerHTML = `${STATUS_ICON} ${STATUS_LABELS[agentStatus]} <span class="caret">▾</span>`;
+  }
+
+  $('statusPill').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = $('statusMenu');
+    const open = menu.classList.toggle('open');
+    $('statusPill').setAttribute('aria-expanded', String(open));
+  });
+
+  $('statusMenu').addEventListener('click', (e) => {
+    const opt = e.target.closest('.status-option');
+    if (!opt) return;
+    agentStatus = opt.dataset.status;
+    $('statusMenu').classList.remove('open');
+    renderStatus();
+    if (!activeId) renderLiveChat();
+    toast(`Status set to ${STATUS_LABELS[agentStatus]}`);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#statusMenu')) $('statusMenu').classList.remove('open');
+  });
+
+  $('notifBtn').addEventListener('click', () => {
+    const incoming = order.find(id => contacts[id].status === 'incoming');
+    toast(incoming ? `${contacts[incoming].name} is waiting — accept in the Agent Desk panel` : 'No new notifications');
+  });
+
+  /* ════════════════════════════════════════════════════════════════
+     Agent Desk panel collapse / resize
+     ════════════════════════════════════════════════════════════════ */
+  const shell = $('shell');
+  const toggleBtn = $('toggleBtn');
+  const deskResizer = $('deskResizer');
+  const minWidth = 210;
+  const maxWidth = 460;
+  let lastExpandedWidth = 270;
+  let isDragging = false;
+
+  toggleBtn.addEventListener('click', () => {
+    const collapsed = shell.classList.toggle('collapsed');
+    if (!collapsed) shell.style.setProperty('--desk-width', `${lastExpandedWidth}px`);
+    toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+  });
+
+  deskResizer.addEventListener('mousedown', (e) => {
+    if (shell.classList.contains('collapsed')) return;
+    isDragging = true;
+    deskResizer.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const w = Math.min(Math.max(e.clientX, minWidth), maxWidth);
+    lastExpandedWidth = w;
+    shell.style.setProperty('--desk-width', `${w}px`);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    deskResizer.classList.remove('dragging');
+    document.body.style.userSelect = '';
+  });
+
+  window.addEventListener('resize', () => updateScrollFades());
+
+  /* ════════════════════════════════════════════════════════════════
+     Clock: contact timers + scheduled incoming chat
+     ════════════════════════════════════════════════════════════════ */
+  let elapsed = 0;
+  const INCOMING_AFTER = 25; /* seconds until Sam's chat is offered */
+
+  setInterval(() => {
+    elapsed++;
+    order.forEach(id => {
+      const c = contacts[id];
+      if (c.status === 'connected' || c.status === 'incoming') {
+        c.seconds++;
+        const t = $('timer-' + id);
+        if (t) t.textContent = fmt(c.seconds);
+      }
+    });
+    const active = contacts[activeId];
+    if (active && active.status === 'connected') $('liveChatTimer').textContent = fmt(active.seconds);
+
+    if (contacts.sam.status === 'pending' && elapsed >= INCOMING_AFTER && agentStatus === 'available') {
+      offerIncoming('sam');
+    }
+  }, 1000);
+
+  /* ════════════════════════════════════════════════════════════════
+     Boot
+     ════════════════════════════════════════════════════════════════ */
+  contacts.jo.seconds = 74; /* Jo has been waiting a little longer */
+  renderStatus();
+  renderAll();
+  resetIqa();
+  startChat('nina');
+  /* Jo's opening message lands in the background so the unread badge shows */
+  setTimeout(() => startChat('jo'), 2500);
+  </script>
+</body>
+</html>

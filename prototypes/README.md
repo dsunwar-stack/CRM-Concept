@@ -27,3 +27,16 @@ square is shown.
   get a refined answer, and open *Sources*.
 - **Search and filter responses**, toggle **Available / Break / Offline**, **End Chat** then
   **Close Contact**, collapse the CCP panel, or drag its edge to resize.
+
+## `Agent-AssistantforBank.html` — portfolio-safe copy
+
+The same prototype with nothing traceable to a real employer, for sharing in a portfolio. Share
+this file, never `ccp-chat-prototype.html`.
+
+- Fictional bank (Meridian Bank), customers (Nina Ashby, Jo Marlow, Sam Okafor), merchant
+  (Bramblemart, shown on statements as `BRMBL*MKTPLACE`) and references (`MB-DEMO-…`).
+- UK only: £ amounts, UK dates and spelling, and generic "card scheme dispute rules" wording
+  instead of named regulations.
+- Labelled as a concept prototype in the footer. Suggestion cards have a front-end-only
+  "Not helpful?" picker and example source chips.
+- Runs fully offline: no fonts, scripts or other external requests, and no storage.
