@@ -47,3 +47,14 @@ The portfolio-safe copy with a refreshed visual layer: Geist and Geist Mono (emb
 a 4px spacing scale, white panels on a soft canvas, segmented tabs and Lucide line icons
 throughout. Content, data and every interaction are the same as `Agent-AssistantforBank.html`,
 and it still runs fully offline as one file. Safe to share.
+
+## `Agent-Assistant-3.html` — reworked assist panel
+
+Version 2 with the assist panel restructured for comparison:
+
+- The right panel has two tabs. **Suggestions** holds a compact customer summary and the next
+  best response, with **Use reply** as the main action and alternatives as one-tap options.
+  **Ask Assist** is a chat-style thread: question, answer, clarifying questions inside the
+  answer, then the refined answer as the next message.
+- A dot on the Suggestions tab flags a new suggestion that arrives while you're in Ask Assist.
+- A suggestion bar sits above the chat message box so the reply is next to where it's sent.
