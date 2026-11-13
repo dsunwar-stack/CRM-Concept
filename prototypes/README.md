@@ -58,3 +58,28 @@ Version 2 with the assist panel restructured for comparison:
   answer, then the refined answer as the next message.
 - A dot on the Suggestions tab flags a new suggestion that arrives while you're in Ask Assist.
 - A suggestion bar sits above the chat message box so the reply is next to where it's sent.
+
+## `Agent-Assistant-4.html` — redesign around human-in-the-loop AI
+
+A new design, built from UX heuristics and principles for AI that keeps the agent in charge.
+Agents handle at most two chats at a time.
+
+- **Two seats.** The top bar shows both chats with live state ("Waiting on you · 0:42", amber
+  then red as the wait grows). A third customer waits in the queue and can only be accepted
+  once a seat is free.
+- **Assist drafts, the agent decides.** The draft sits on top of the message box with tone
+  options, "Why this?" (reasons and example sources) and a label for any facts it states.
+  Assist never sends: the agent inserts, edits and sends. Once sent, the draft collapses so it
+  isn't sent twice.
+- **Accuracy checks.** Facts in a draft (amounts, references, timelines) appear as chips to
+  check off. Sending with unchecked facts, or sending a reply that says an action is done
+  before it's approved, shows a "Before you send" warning.
+- **Proposed actions need approval.** Account changes are proposals with what will happen and
+  the customer's consent shown, plus Approve, Not now and a 10-second Undo.
+- **Transparency.** One purple sparkle marks anything Assist generated. Sent messages show
+  whether they came from an Assist draft, edited or not. "What Assist can see and do" is
+  spelled out, and the Log tab records every suggestion and decision.
+- **Trust and correction.** The agent can correct the detected intent, rate drafts and
+  answers, and Ask answers cite sources or say plainly when nothing was found.
+- **Wrap-up.** Ending a chat produces an Assist-drafted note the agent reviews before saving.
+- Keyboard: Alt+1 / Alt+2 switch chats, Alt+D inserts the draft, "/" opens saved responses.
