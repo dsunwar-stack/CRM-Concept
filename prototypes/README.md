@@ -82,4 +82,7 @@ Agents handle at most two chats at a time.
 - **Trust and correction.** The agent can correct the detected intent, rate drafts and
   answers, and Ask answers cite sources or say plainly when nothing was found.
 - **Wrap-up.** Ending a chat produces an Assist-drafted note the agent reviews before saving.
+- **Resizable panels.** Drag the divider between the chat and Assist (or focus it and use the
+  arrow keys) to trade width; double-click resets it, and the width is remembered in the
+  browser. Each panel rearranges its own contents as it narrows.
 - Keyboard: Alt+1 / Alt+2 switch chats, Alt+D inserts the draft, "/" opens saved responses.

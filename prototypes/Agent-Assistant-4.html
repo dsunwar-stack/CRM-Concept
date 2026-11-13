@@ -263,12 +263,60 @@
 
     /* ── Workspace ── */
     .workspace {
+      --assist-w: 400px;
       height: calc(var(--app-height) - var(--topbar-h));
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 400px;
-      gap: var(--s4);
+      grid-template-columns: minmax(0, 1fr) 16px var(--assist-w);
       padding: var(--s4) var(--s5) var(--s4);
     }
+    .workspace.resizing { user-select: none; cursor: col-resize; }
+    .workspace.resizing .card { pointer-events: none; }
+
+    /* Drag (or use arrow keys) to trade width between the chat and Assist */
+    .splitter {
+      position: relative;
+      cursor: col-resize;
+      touch-action: none;
+      border-radius: var(--r-pill);
+      outline: none;
+    }
+    .splitter::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 4px;
+      height: 40px;
+      transform: translate(-50%, -50%);
+      border-radius: var(--r-pill);
+      background: var(--line-strong);
+      transition: background 140ms ease, height 140ms ease;
+    }
+    .splitter:hover::before, .splitter:focus-visible::before, .workspace.resizing .splitter::before {
+      background: var(--accent);
+      height: 64px;
+    }
+    .splitter:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-line); }
+    .splitter-tip {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + 44px);
+      transform: translateX(-50%);
+      white-space: nowrap;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      padding: 2px 6px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 140ms ease;
+      z-index: 5;
+    }
+    .splitter:hover .splitter-tip, .splitter:focus-visible .splitter-tip { opacity: 1; }
+    .workspace.resizing .splitter-tip { opacity: 0; }
+
     .card {
       background: var(--surface);
       border: 1px solid var(--line);
@@ -587,7 +635,8 @@
       .seat .kbd, .capacity .meter-label { display: none; }
     }
     @media (max-width: 1060px) {
-      .workspace { grid-template-columns: 1fr; height: auto; }
+      .workspace { grid-template-columns: 1fr; height: auto; gap: var(--s4); }
+      .splitter { display: none; }
       .card.convo { height: 78vh; }
       .card.assist { height: 70vh; }
       .brand-name { display: none; }
@@ -599,6 +648,30 @@
       .capacity, .topbar-right .icon-btn { display: none; }
       .workspace { padding: var(--s3); }
       .msg { max-width: 90%; }
+    }
+    /* Panels adapt to their own width, not just the window */
+    .card.convo, .card.assist { container-type: inline-size; }
+    @container (max-width: 640px) {
+      .composer-bar .muted { display: none; }
+      .draft-foot .hint { display: none; }
+      .msg { max-width: 88%; }
+      .convo-meta .since { display: none; }
+    }
+    @container (max-width: 500px) {
+      .composer-bar .btn.ghost .kbd, .draft-foot .btn .kbd { display: none; }
+      .composer-bar [data-act="ask"] { display: none; }
+      .draft-head .tone { order: 5; }
+      .convo-head .btn.danger { padding: 0 8px; }
+      .messages { padding: var(--s4) var(--s3); }
+      .compose-zone { padding: var(--s3); }
+    }
+    @container (max-width: 360px) {
+      .assist-tabs button { font-size: 0; gap: 0; }
+      .assist-tabs button .ic { font-size: 16px; }
+      .kv { grid-template-columns: 64px 1fr; }
+    }
+    @container (min-width: 560px) {
+      .assist-body { padding: var(--s5); }
     }
   </style>
 </head>
@@ -624,15 +697,21 @@
     </div>
   </header>
 
-  <main class="workspace">
+  <main class="workspace" id="workspace">
     <section class="card convo" id="convo" aria-label="Conversation"></section>
+
+    <div class="splitter" id="splitter" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="convo"
+         aria-label="Resize chat and Assist panels" aria-valuemin="320" aria-valuemax="720" aria-valuenow="400"
+         title="Drag to resize. Double-click to reset.">
+      <span class="splitter-tip">Drag · ← → · double-click to reset</span>
+    </div>
 
     <aside class="card assist" aria-label="Assist">
       <div class="assist-tabs" role="tablist" aria-label="Assist views">
-        <button type="button" role="tab" id="tab-insights" aria-selected="true" data-tab="insights"><span class="ico" data-icon="sparkles"></span>Insights</button>
-        <button type="button" role="tab" id="tab-ask" aria-selected="false" data-tab="ask"><span class="ico" data-icon="circle-help"></span>Ask</button>
-        <button type="button" role="tab" id="tab-customer" aria-selected="false" data-tab="customer"><span class="ico" data-icon="user-round-check"></span>Customer</button>
-        <button type="button" role="tab" id="tab-log" aria-selected="false" data-tab="log"><span class="ico" data-icon="history"></span>Log</button>
+        <button type="button" role="tab" id="tab-insights" aria-selected="true" data-tab="insights" title="Insights"><span class="ico" data-icon="sparkles"></span>Insights</button>
+        <button type="button" role="tab" id="tab-ask" aria-selected="false" data-tab="ask" title="Ask"><span class="ico" data-icon="circle-help"></span>Ask</button>
+        <button type="button" role="tab" id="tab-customer" aria-selected="false" data-tab="customer" title="Customer"><span class="ico" data-icon="user-round-check"></span>Customer</button>
+        <button type="button" role="tab" id="tab-log" aria-selected="false" data-tab="log" title="Log"><span class="ico" data-icon="history"></span>Log</button>
       </div>
       <div class="assist-body" id="assistBody" role="tabpanel"></div>
       <div class="ask-wrap" id="askWrap" role="tabpanel" hidden>
@@ -1154,7 +1233,7 @@
             <span class="chip good" title="Checked by the system at the start of the chat: ${esc(cu.verified)}">${icon('shield-check')}Identity checked</span>
             ${ended ? '<span class="chip neutral">Wrap-up</span>' : ''}
           </div>
-          <div class="convo-meta">${cu.segment}<span class="sep">·</span>Customer since ${cu.since}<span class="sep">·</span>Chat <span class="mono" id="convoTimer">${fmt(c.seconds)}</span></div>
+          <div class="convo-meta">${cu.segment}<span class="since"><span class="sep">·</span> Customer since ${cu.since}</span><span class="sep">·</span>Chat <span class="mono" id="convoTimer">${fmt(c.seconds)}</span></div>
         </div>
         ${ended ? '' : `<button class="btn danger sm" type="button" data-act="end">${icon('circle-x')}End chat</button>`}
       </div>
@@ -1964,6 +2043,73 @@
       if (!activeId()) renderConvo();
     }
   }, 1000);
+
+  /* ════════════════════════════════════════════════════════════════
+     Resizable panels: drag the divider, use arrow keys, double-click to reset
+     ════════════════════════════════════════════════════════════════ */
+  const ASSIST_DEFAULT = 400;
+  const ASSIST_MIN = 320;
+  const CHAT_MIN = 380;
+  const WIDTH_KEY = 'agentDesk.assistWidth';
+  let assistWidth = ASSIST_DEFAULT;
+
+  function maxAssist() {
+    const ws = $('workspace');
+    const styles = getComputedStyle(ws);
+    const inner = ws.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight) - 16;
+    return Math.max(ASSIST_MIN, inner - CHAT_MIN);
+  }
+
+  function setAssistWidth(w, remember) {
+    assistWidth = Math.round(Math.min(maxAssist(), Math.max(ASSIST_MIN, w)));
+    $('workspace').style.setProperty('--assist-w', assistWidth + 'px');
+    const sp = $('splitter');
+    sp.setAttribute('aria-valuenow', String(assistWidth));
+    sp.setAttribute('aria-valuemax', String(Math.round(maxAssist())));
+    sp.setAttribute('aria-valuetext', `Assist ${assistWidth} pixels wide`);
+    if (remember) { try { localStorage.setItem(WIDTH_KEY, String(assistWidth)); } catch (e) { /* storage unavailable */ } }
+  }
+
+  (function initSplitter() {
+    const sp = $('splitter');
+    const ws = $('workspace');
+    let startX = 0, startW = 0;
+
+    sp.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      startX = e.clientX;
+      startW = assistWidth;
+      sp.setPointerCapture(e.pointerId);
+      ws.classList.add('resizing');
+    });
+    sp.addEventListener('pointermove', (e) => {
+      if (!ws.classList.contains('resizing')) return;
+      setAssistWidth(startW + (startX - e.clientX), false);
+    });
+    const end = (e) => {
+      if (!ws.classList.contains('resizing')) return;
+      ws.classList.remove('resizing');
+      try { sp.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
+      setAssistWidth(assistWidth, true);
+    };
+    sp.addEventListener('pointerup', end);
+    sp.addEventListener('pointercancel', end);
+    sp.addEventListener('dblclick', () => { setAssistWidth(ASSIST_DEFAULT, true); toast('Panels reset'); });
+    sp.addEventListener('keydown', (e) => {
+      const step = e.shiftKey ? 80 : 24;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); setAssistWidth(assistWidth + step, true); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); setAssistWidth(assistWidth - step, true); }
+      else if (e.key === 'Home') { e.preventDefault(); setAssistWidth(maxAssist(), true); }
+      else if (e.key === 'End') { e.preventDefault(); setAssistWidth(ASSIST_MIN, true); }
+      else if (e.key === 'Enter') { e.preventDefault(); setAssistWidth(ASSIST_DEFAULT, true); }
+    });
+    window.addEventListener('resize', () => setAssistWidth(assistWidth, false));
+
+    let saved = null;
+    try { saved = Number(localStorage.getItem(WIDTH_KEY)); } catch (e) { /* storage unavailable */ }
+    setAssistWidth(saved > 0 ? saved : ASSIST_DEFAULT, false);
+  })();
 
   /* ════════════════════════════════════════════════════════════════
      Boot
