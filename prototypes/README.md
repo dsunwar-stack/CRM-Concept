@@ -40,3 +40,10 @@ this file, never `ccp-chat-prototype.html`.
 - Labelled as a concept prototype in the footer. Suggestion cards have a front-end-only
   "Not helpful?" picker and example source chips.
 - Runs fully offline: no fonts, scripts or other external requests, and no storage.
+
+## `Agent-Assistant-2.html` — modern restyle
+
+The portfolio-safe copy with a refreshed visual layer: Geist and Geist Mono (embedded),
+a 4px spacing scale, white panels on a soft canvas, segmented tabs and Lucide line icons
+throughout. Content, data and every interaction are the same as `Agent-AssistantforBank.html`,
+and it still runs fully offline as one file. Safe to share.
