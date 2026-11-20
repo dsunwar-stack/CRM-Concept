@@ -1,0 +1,808 @@
+<title>Statement Clarity Prototype</title>
+<meta name="description" content="Clickable mobile banking prototype: transaction clarity, AI help and a context-carrying handoff to a human specialist.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a review stage. Design-notes rail on the left, a 390×844 device on the right; at phone width the app goes full-bleed. */
+:root{
+  /* stage (theme-aware) */
+  --bg:#E7EBF2; --fg:#13213A; --muted:#56637A; --rail:#FFFFFF; --line:#D3DAE5; --accent:#1E5EFF; --accent-soft:#E6EDFF;
+  /* type */
+  --display:"Inter Tight","Inter",system-ui,-apple-system,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  /* app (one committed look: navy + white, same in both themes) */
+  --navy:#0A1B33; --navy-2:#14305A; --ink:#0E1A2E; --ink-2:#47556E; --ink-3:#7F8BA0;
+  --app-bg:#F2F4F8; --card:#FFFFFF; --hair:#E2E7EF; --blue:#1E5EFF; --blue-soft:#E8EFFF;
+  --amber:#875100; --amber-bg:#FFF1D6; --green:#0A7753; --green-bg:#E1F4EC; --slate:#4D5A70; --slate-bg:#ECEFF4; --red:#B42318;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#070E1B; --fg:#E6ECF6; --muted:#93A0B6; --rail:#0E1829; --line:#1F2C42; --accent:#7FA2FF; --accent-soft:#16244A; color-scheme:dark }
+}
+:root[data-theme="dark"]{ --bg:#070E1B; --fg:#E6ECF6; --muted:#93A0B6; --rail:#0E1829; --line:#1F2C42; --accent:#7FA2FF; --accent-soft:#16244A; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.stage{min-height:100%;display:flex;align-items:center;justify-content:center;gap:48px;padding-block:32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* ---------- design-notes rail ---------- */
+.rail{width:340px;flex:0 1 340px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.rail h1{font-family:var(--display);font-size:28px;line-height:1.1;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.rail .lede{color:var(--muted);font-size:14px;line-height:1.55;margin:0}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.step{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;width:100%;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid transparent;transition:background .2s,border-color .2s}
+.step:hover{background:var(--rail)}
+.step .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.step b{display:block;font-size:14px;font-weight:600;margin-bottom:2px}
+.step span.s{font-size:12.5px;color:var(--muted);line-height:1.4}
+.step[aria-current="step"]{background:var(--rail);border-color:var(--line)}
+.step[aria-current="step"] .n{background:var(--accent);border-color:var(--accent);color:var(--rail)}
+.note{background:var(--rail);border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;line-height:1.55;color:var(--muted)}
+.note strong{color:var(--fg);display:block;font-size:13px;margin-bottom:6px}
+.note ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.rail-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-ghost{font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--rail)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.tiny{font-size:12px;color:var(--muted)}
+
+/* ---------- device ---------- */
+.device{flex:none;width:414px;height:868px;padding:12px;border-radius:58px;background:#05080F;box-shadow:0 0 0 1px #2A3446 inset,0 40px 80px -30px rgba(8,20,45,.55),0 12px 30px -12px rgba(8,20,45,.35)}
+@media (max-height:920px) and (min-width:521px){ .device{zoom:.86} }
+@media (max-height:780px) and (min-width:521px){ .device{zoom:.74} }
+.screen{position:relative;width:390px;height:844px;border-radius:46px;overflow:hidden;background:var(--app-bg);color:var(--ink);font-family:var(--body);isolation:isolate}
+
+.statusbar{position:absolute;inset:0 0 auto;height:50px;z-index:40;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 10px 34px;font-weight:600;font-size:15px;color:#fff;pointer-events:none;transition:color .3s}
+.statusbar svg{display:block}
+.screen.light-bar .statusbar{color:var(--ink)}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:34px;border-radius:20px;background:#000;z-index:41}
+.homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--ink);opacity:.85;z-index:60;pointer-events:none}
+
+.view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--app-bg);transition:transform .42s cubic-bezier(.3,.7,.2,1),opacity .3s;scrollbar-width:none}
+.view::-webkit-scrollbar{display:none}
+.view.before{transform:translateX(-28%);opacity:.0;pointer-events:none}
+.view.after{transform:translateX(100%);pointer-events:none}
+.view.now{transform:none;opacity:1}
+
+/* ---------- screen 1: activity ---------- */
+.acct-head{background:radial-gradient(120% 90% at 85% 0%,var(--navy-2) 0%,var(--navy) 60%);color:#fff;padding:64px 20px 26px;border-radius:0 0 28px 28px}
+.acct-top{display:flex;justify-content:space-between;align-items:center}
+.acct-name{font-size:13px;opacity:.75;font-weight:500}
+.avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;font-size:13px;font-weight:600}
+.balance{font-family:var(--display);font-size:40px;font-weight:600;letter-spacing:-.025em;margin:14px 0 2px;font-variant-numeric:tabular-nums}
+.balance small{font-size:24px;opacity:.7}
+.avail{font-size:13px;opacity:.75;font-variant-numeric:tabular-nums}
+.avail b{font-weight:600;opacity:1;color:#FFD48A}
+.acct-actions{display:flex;gap:10px;margin-top:20px}
+.acct-actions span{flex:1;text-align:center;padding:10px 0;border-radius:14px;background:rgba(255,255,255,.09);font-size:12.5px;font-weight:500}
+.cb-strip{margin:16px 16px 0;padding:12px 14px;background:var(--card);border-radius:16px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 0 var(--hair)}
+.cb-strip .ico{width:34px;height:34px;border-radius:10px;background:var(--green-bg);color:var(--green);display:grid;place-items:center}
+.cb-strip .t{font-size:13px;font-weight:600}
+.cb-strip .s{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:6px;margin:18px 16px 4px;background:#E4E8EF;padding:4px;border-radius:12px}
+.tabs span{flex:1;text-align:center;font-size:13px;font-weight:600;padding:7px;border-radius:9px;color:var(--ink-2)}
+.tabs span.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(10,27,51,.08)}
+.day{font-size:12px;font-weight:600;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;padding:18px 20px 8px}
+.txlist{margin:0 16px;background:var(--card);border-radius:18px;overflow:hidden}
+.tx{display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;padding:12px 14px;position:relative;transition:background .15s}
+.tx+.tx::before{content:"";position:absolute;left:68px;right:0;top:0;height:1px;background:var(--hair)}
+.tx:hover{background:#F7F9FC}
+.tx:active{background:#EEF2F8}
+.logo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;letter-spacing:-.01em;font-family:var(--display)}
+.logo.lg{width:64px;height:64px;border-radius:20px;font-size:22px}
+.tx .nm{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx .nm.raw{font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:-.01em}
+.tx .meta{font-size:12.5px;color:var(--ink-3);margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tx .amt{text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tx .amt.in{color:var(--green)}
+.tx .amt small{display:block;font-size:11.5px;font-weight:500;color:var(--green);margin-top:3px}
+.tx .amt small.no{color:var(--ink-3)}
+.tx.hot .nm::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blue);margin-left:6px;vertical-align:middle;animation:pulse 1.8s infinite}
+.tx-min{min-width:0}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 7px;border-radius:999px;line-height:1.2;white-space:nowrap}
+.chip.pending{background:var(--amber-bg);color:var(--amber)}
+.chip.no{background:var(--slate-bg);color:var(--slate)}
+.chip.ok{background:var(--green-bg);color:var(--green)}
+.hint{font-size:12px;color:var(--blue);font-weight:500}
+.list-foot{height:40px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ---------- screen 2: detail ---------- */
+.topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:54px 12px 8px;background:rgba(242,244,248,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.topbar .ttl{font-size:16px;font-weight:600}
+.iconbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink)}
+.iconbtn:hover{background:#E4E8EF}
+.d-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 20px 18px;gap:6px}
+.d-name{font-family:var(--display);font-size:22px;font-weight:600;letter-spacing:-.015em;margin-top:8px}
+.d-sub{font-size:13px;color:var(--ink-2)}
+.d-amt{font-family:var(--display);font-size:38px;font-weight:600;letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin:6px 0 4px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px}
+.badge.pending{background:var(--amber-bg);color:var(--amber)}
+.badge.settled{background:var(--green-bg);color:var(--green)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.badge.pending .dot{animation:pulse 1.8s infinite}
+.raw-line{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:10px}
+.raw-line .lab{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.raw-line code{font-family:var(--mono);font-size:12.5px;background:var(--card);border:1px dashed #C9D2DF;padding:4px 9px;border-radius:8px;color:var(--ink-2)}
+.card{background:var(--card);border-radius:20px;margin:0 16px 12px;overflow:hidden}
+.explain{padding:16px 16px 14px;border:1px solid #D7E2FF;background:linear-gradient(180deg,#F5F8FF 0%,#FFFFFF 70%)}
+.explain h3{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:15px;font-weight:600}
+.explain h3 .i{width:24px;height:24px;border-radius:8px;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center}
+.explain p{margin:0;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.timeline{display:grid;grid-template-columns:1fr 1fr 1fr;margin:14px 0 2px;position:relative}
+.timeline::before{content:"";position:absolute;top:6px;left:16.6%;right:16.6%;height:2px;background:linear-gradient(90deg,var(--blue) 0 50%,#D5DDEA 50% 100%)}
+.timeline.done::before{background:var(--green)}
+.tl{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;position:relative}
+.tl i{width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #C8D1DF}
+.tl.on i{background:var(--blue);border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft)}
+.tl.ok i{background:var(--green);border-color:var(--green)}
+.tl b{font-size:12px;font-weight:600}
+.tl span{font-size:11.5px;color:var(--ink-3)}
+.cb-row{display:flex;gap:12px;align-items:flex-start;margin-top:14px;padding-top:14px;border-top:1px solid var(--hair)}
+.cb-row .ico{width:30px;height:30px;flex:none;border-radius:9px;display:grid;place-items:center}
+.cb-row .ico.ok{background:var(--green-bg);color:var(--green)}
+.cb-row .ico.no{background:var(--slate-bg);color:var(--slate)}
+.cb-row .ico.pend{background:var(--amber-bg);color:var(--amber)}
+.cb-row b{font-size:13.5px;display:block}
+.cb-row span{font-size:13px;color:var(--ink-2);line-height:1.45}
+.rows{padding:4px 16px}
+.row{display:flex;justify-content:space-between;gap:16px;padding:12px 0;font-size:14px}
+.row+.row{border-top:1px solid var(--hair)}
+.row .k{color:var(--ink-3)}
+.row .v{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.row .v.mono{font-family:var(--mono);font-size:12.5px}
+.map{position:relative;height:118px}
+.map svg{display:block;width:100%;height:100%}
+.map .pin{position:absolute;left:50%;top:44%;transform:translate(-50%,-100%);filter:drop-shadow(0 4px 6px rgba(10,27,51,.3))}
+.map .pin::after{content:"";position:absolute;left:50%;bottom:-6px;width:14px;height:5px;border-radius:50%;background:rgba(10,27,51,.2);transform:translateX(-50%)}
+.loc{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;font-size:13.5px}
+.loc b{display:block;font-weight:600}
+.loc span{color:var(--ink-3);font-size:12.5px}
+.more-btn{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;font-size:14px;font-weight:600}
+.more-btn svg{transition:transform .25s}
+.more-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.d-actions{position:sticky;bottom:0;padding:14px 16px 30px;background:linear-gradient(180deg,rgba(242,244,248,0) 0%,var(--app-bg) 26%);display:flex;flex-direction:column;gap:8px;z-index:4}
+.btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;height:52px;border-radius:16px;font-size:15.5px;font-weight:600;transition:transform .12s,background .2s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--navy);color:#fff}
+.btn.primary:hover{background:#12294B}
+.btn.primary .spark{color:#9DB8FF}
+.btn.secondary{background:var(--card);color:var(--ink);box-shadow:0 0 0 1px var(--hair) inset}
+.btn.secondary:hover{box-shadow:0 0 0 1px #C5CFDD inset}
+.spacer{height:4px}
+
+/* bottom sheets / drawer */
+.scrim{position:absolute;inset:0;background:rgba(6,14,28,.42);opacity:0;pointer-events:none;transition:opacity .3s;z-index:20}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card);border-radius:28px 28px 0 0;transform:translateY(102%);transition:transform .42s cubic-bezier(.3,.8,.2,1);display:flex;flex-direction:column}
+.sheet.on{transform:none}
+.grab{width:38px;height:5px;border-radius:3px;background:#D3D9E3;margin:8px auto 0;flex:none}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px 20px;flex:none}
+.sheet-h h2{margin:0;font-size:17px;font-weight:600;display:flex;align-items:center;gap:8px}
+.report{padding:0 16px 34px}
+.report p{margin:0 4px 12px;font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.opt{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:14px;border-radius:14px;background:var(--app-bg);margin-bottom:8px;font-size:14.5px;font-weight:500}
+.opt:hover{background:#E8ECF3}
+.opt .oi{width:32px;height:32px;border-radius:10px;background:var(--card);display:grid;place-items:center;color:var(--ink-2);flex:none}
+.opt .chev{margin-left:auto;color:var(--ink-3)}
+
+/* ---------- screen 3: assistant ---------- */
+.drawer{height:88%}
+.ctx{margin:4px 16px 0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--app-bg);flex:none}
+.ctx .logo{width:34px;height:34px;border-radius:10px;font-size:12px}
+.ctx .t{font-size:13px;font-weight:600}
+.ctx .s{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.ctx .att{margin-left:auto;font-size:11px;font-weight:600;color:var(--green);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px 8px;display:flex;flex-direction:column;gap:10px;scrollbar-width:none}
+.msgs::-webkit-scrollbar{display:none}
+.msg{max-width:86%;font-size:14px;line-height:1.5;padding:10px 13px;border-radius:18px;animation:rise .28s ease-out both}
+.msg.bot{background:var(--app-bg);border-bottom-left-radius:6px;align-self:flex-start}
+.msg.me{background:var(--navy);color:#fff;border-bottom-right-radius:6px;align-self:flex-end}
+.msg .facts{margin-top:9px;background:var(--card);border-radius:12px;padding:4px 10px}
+.msg .facts div{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:6px 0}
+.msg .facts div+div{border-top:1px solid var(--hair)}
+.msg .facts span{color:var(--ink-3)}
+.msg .facts b{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.msg .fb{display:flex;gap:6px;margin-top:8px;align-items:center;font-size:12px;color:var(--ink-3)}
+.msg .fb button{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--card);color:var(--ink-2)}
+.msg .fb button[aria-pressed="true"]{background:var(--blue-soft);color:var(--blue)}
+.typing{display:flex;gap:4px;padding:14px 14px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--ink-3);animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:6px 16px 10px;flex:none}
+.schip{font-size:13px;font-weight:500;padding:8px 12px;border-radius:999px;background:var(--card);box-shadow:0 0 0 1px #CBD6EA inset;color:var(--navy);display:inline-flex;align-items:center;gap:6px;transition:background .15s,box-shadow .15s}
+.schip:hover{background:var(--blue-soft);box-shadow:0 0 0 1px #9DB4F2 inset}
+.schip.used{color:var(--ink-3);box-shadow:0 0 0 1px var(--hair) inset}
+.schip:disabled{opacity:.5;cursor:default}
+.escal{margin:0 16px;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--navy);color:#fff;text-align:left;flex:none;transition:background .2s}
+.escal:hover{background:#12294B}
+.escal .ei{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;flex:none}
+.escal b{display:block;font-size:14px}
+.escal span{font-size:12px;opacity:.7}
+.escal .chev{margin-left:auto;opacity:.7}
+.compose{display:flex;gap:8px;padding:10px 16px 30px;flex:none}
+.compose input{flex:1;min-width:0;height:44px;border-radius:22px;border:1px solid var(--hair);background:var(--app-bg);padding:0 16px;font:inherit;font-size:14px;color:var(--ink)}
+.compose button{width:44px;height:44px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;flex:none}
+
+/* ---------- screen 4: handoff ---------- */
+.h-hero{padding:6px 24px 18px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.ring{width:84px;height:84px;border-radius:50%;position:relative;display:grid;place-items:center;background:var(--navy);color:#fff;margin-bottom:6px}
+.ring::before,.ring::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid var(--blue);opacity:0;animation:ripple 2.4s infinite}
+.ring::after{animation-delay:1.2s}
+.ring.joined::before,.ring.joined::after{display:none}
+.ring.joined{background:#2E5E7E;font-family:var(--display);font-weight:600;font-size:26px}
+@keyframes ripple{0%{transform:scale(.9);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+.h-title{font-family:var(--display);font-size:23px;font-weight:600;letter-spacing:-.015em;margin:0;text-wrap:balance}
+.h-sub{font-size:14px;color:var(--ink-2);margin:0;line-height:1.45}
+.wait{padding:16px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:end}
+.wait .lab{font-size:12px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.wait .big{font-family:var(--display);font-size:30px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.wait .pos{font-size:13px;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums}
+.bar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--slate-bg);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--blue);border-radius:3px;transition:width 1s linear}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:600}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.4s infinite}
+.shared-h{padding:16px 16px 4px;display:flex;justify-content:space-between;align-items:baseline}
+.shared-h b{font-size:15px}
+.shared-h span{font-size:12px;color:var(--ink-3)}
+.att-row{display:grid;grid-template-columns:30px 1fr;gap:12px;padding:12px 16px;align-items:start}
+.att-row+.att-row{border-top:1px solid var(--hair)}
+.tick{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--slate-bg);color:var(--ink-3);transition:background .3s,color .3s}
+.tick .spin{width:16px;height:16px;border-radius:50%;border:2px solid #C5CEDB;border-top-color:var(--blue);animation:spin .8s linear infinite}
+.tick.done{background:var(--green-bg);color:var(--green)}
+.tick.done .spin{display:none}
+.tick svg{display:none}
+.tick.done svg{display:block;animation:pop .3s ease-out}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{from{transform:scale(.4)}to{transform:scale(1)}}
+.att-row b{font-size:14px;display:block}
+.att-row .d{font-size:13px;color:var(--ink-2);line-height:1.45;margin-top:2px}
+.att-row .d code{font-family:var(--mono);font-size:12px;color:var(--ink)}
+.summary{margin-top:8px;background:var(--app-bg);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+.summary ul{margin:4px 0 0;padding-left:16px}
+.reassure{display:flex;gap:10px;align-items:center;margin:0 16px 12px;padding:12px 14px;border-radius:14px;background:var(--green-bg);color:var(--green);font-size:13.5px;font-weight:500;line-height:1.4}
+.agentview{background:var(--navy);color:#C9D5EA;margin:0 16px 12px;border-radius:18px;padding:14px;font-size:12px;line-height:1.5}
+.agentview .ah{display:flex;justify-content:space-between;color:#fff;font-weight:600;font-size:12.5px;margin-bottom:10px}
+.agentview .ah span{font-weight:500;color:#8EA3C6}
+.agentview .grid{display:grid;grid-template-columns:auto 1fr;gap:5px 12px}
+.agentview .grid span{color:#8EA3C6}
+.agentview .grid b{color:#fff;font-weight:500;font-family:var(--mono);font-size:11.5px}
+.agentview .ai{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1)}
+.h-actions{padding:6px 16px 34px;display:flex;flex-direction:column;gap:8px}
+.textbtn{font-size:14px;font-weight:600;color:var(--red);padding:10px}
+.agent-msg{margin:0 16px 12px;display:flex;gap:10px;align-items:flex-end;animation:rise .35s ease-out both}
+.agent-msg .av{width:32px;height:32px;border-radius:50%;background:#2E5E7E;color:#fff;font-size:12px;font-weight:600;display:grid;place-items:center;flex:none}
+.agent-msg .bub{background:var(--card);border-radius:18px 18px 18px 6px;padding:11px 13px;font-size:14px;line-height:1.5}
+.agent-msg .who{font-size:11.5px;color:var(--ink-3);margin-bottom:3px;font-weight:600}
+
+.toast{position:absolute;left:50%;bottom:44px;transform:translate(-50%,20px);background:var(--ink);color:#fff;font-size:13px;padding:10px 16px;border-radius:12px;opacity:0;transition:opacity .25s,transform .25s;z-index:70;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- phone width: app goes full-bleed ---------- */
+@media (max-width:520px){
+  .stage{padding:0;display:block;height:100%}
+  .rail{display:none}
+  .device{width:100%;height:100%;padding:0;border-radius:0;box-shadow:none;background:var(--app-bg)}
+  .screen{width:100%;height:100%;border-radius:0}
+  .island{display:none}
+  .statusbar{display:none}
+  .acct-head{padding-top:28px}
+  .topbar{padding-top:14px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="stage">
+  <aside class="rail" aria-label="Prototype guide">
+    <div>
+      <div class="eyebrow">Interactive prototype · Mobile banking</div>
+      <h1>Statement clarity &amp; AI support handoff</h1>
+    </div>
+    <p class="lede">Tap through the phone, or jump to a step. Start with the pending <b>SQ *OLIVETREE KTCHN</b> payment at the top of the list.</p>
+    <ol class="steps" id="steps">
+      <li><button class="step" data-jump="1"><span class="n">1</span><span><b>Account activity</b><span class="s">Balance, pending hold, cashback-ineligible row</span></span></button></li>
+      <li><button class="step" data-jump="2"><span class="n">2</span><span><b>Transaction detail</b><span class="s">Plain-English merchant, status, explainer card</span></span></button></li>
+      <li><button class="step" data-jump="3"><span class="n">3</span><span><b>AI assistant</b><span class="s">Context attached, one-tap questions</span></span></button></li>
+      <li><button class="step" data-jump="4"><span class="n">4</span><span><b>Specialist handoff</b><span class="s">What’s shared, live wait time</span></span></button></li>
+    </ol>
+    <div class="note" id="note"></div>
+    <div class="rail-foot">
+      <button class="btn-ghost" data-action="restart">Restart flow</button>
+      <span class="tiny">Fictional bank, merchants and data. Wait times run fast.</span>
+    </div>
+  </aside>
+
+  <div class="device">
+    <div class="screen" id="screen">
+      <div class="island" aria-hidden="true"></div>
+      <div class="statusbar" aria-hidden="true">
+        <span>9:41</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.2-1.3A10.3 10.3 0 0 0 8 .4C5.2.4 2.7 1.5.8 3.3L2 4.6a8.5 8.5 0 0 1 6-2.4Zm0 3.6c1.3 0 2.5.5 3.4 1.3l1.2-1.3A6.6 6.6 0 0 0 8 4c-1.8 0-3.4.7-4.6 1.8l1.2 1.3c.9-.8 2.1-1.3 3.4-1.3Zm0 3.5c.5 0 1 .2 1.3.5L8 11.2 6.7 9.8c.3-.3.8-.5 1.3-.5Z"/></svg>
+          <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x=".5" y=".5" width="22" height="11" rx="3.5" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="2" fill="currentColor"/><rect x="24" y="4" width="1.6" height="4" rx=".8" fill="currentColor" opacity=".5"/></svg>
+        </span>
+      </div>
+
+      <section class="view now" id="v-list" aria-label="Account activity"></section>
+      <section class="view after" id="v-detail" aria-label="Transaction detail"></section>
+      <section class="view after" id="v-handoff" aria-label="Specialist handoff"></section>
+
+      <div class="scrim" id="scrim" data-action="close-sheets"></div>
+      <div class="sheet drawer" id="drawer" role="dialog" aria-label="Assistant" aria-modal="true"></div>
+      <div class="sheet" id="report" role="dialog" aria-label="Report an issue" aria-modal="true"></div>
+      <div class="toast" id="toast" role="status"></div>
+      <div class="homebar" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money = n => '£' + Math.abs(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+const amt = n => (n > 0 ? '+' : '') + money(n);
+
+/* ---------- icons ---------- */
+const I = {
+  back:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  close:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  more:'<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+  spark:'<svg class="spark" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9L12 2zm7 11l.9 2.6 2.6.9-2.6.9L19 20l-.9-2.6-2.6-.9 2.6-.9L19 13z"/></svg>',
+  info:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></svg>',
+  clock:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  coin:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.5 0-2.6.8-2.6 2s1 1.7 2.6 2 2.6.8 2.6 2-1.1 2-2.6 2c-1.1 0-2-.4-2.5-1.2M12 6.5V8m0 8v1.5"/></svg>',
+  nocoin:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+  check:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  chev:'<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  down:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  person:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  headset:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-2 2.5-5 2.5"/></svg>',
+  send:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  up:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11v9H4v-9h3zm0 0l4-8c1.5 0 2.5 1 2.5 2.5V9h5a2 2 0 0 1 2 2.3l-1.2 6.5A2.5 2.5 0 0 1 16.8 20H7"/></svg>',
+  dn:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 13V4h3v9h-3zm0 0l-4 8c-1.5 0-2.5-1-2.5-2.5V15h-5a2 2 0 0 1-2-2.3l1.2-6.5A2.5 2.5 0 0 1 7.2 4H17"/></svg>',
+  shield:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>',
+  q:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17v.01"/></svg>',
+  pound:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7.5A3.5 3.5 0 0 0 9.5 9v6c0 1.5-1 3-2.5 3.5h10M7 13h7"/></svg>',
+  pin:'<svg width="34" height="42" viewBox="0 0 34 42"><path d="M17 41s15-14.2 15-24A15 15 0 0 0 2 17c0 9.8 15 24 15 24z" fill="#0A1B33"/><circle cx="17" cy="17" r="6" fill="#fff"/></svg>'
+};
+
+/* ---------- data (fictional) ---------- */
+const TX = {
+  olive:{ id:'olive', raw:'SQ *OLIVETREE KTCHN LDN', name:'Olive Tree Kitchen', kind:'Restaurant', area:'Islington, London', amount:-42.50,
+    status:'pending', day:'Today', time:'19:42', when:'Fri 20 Nov 2026, 19:42', short:'20 Nov', logo:['OT','#2F5D4E'],
+    ref:'TXN-8F3A-21C9', card:'Debit card ···· 4821', method:'Contactless', category:'Eating out', mcc:'5812 · Restaurants',
+    addr:'212 Upper Street', post:'London N1 1RQ', showRaw:true,
+    explainTitle:'Why is this pending?',
+    explain:'Olive Tree Kitchen placed a temporary hold of £42.50 when you paid. The final amount usually settles within 2–3 working days. It can go up slightly if a tip was added after you paid.',
+    timeline:[['Authorised','Today 19:42','ok'],['Pending','Now','on'],['Settles','By Tue 24 Nov','']],
+    cb:{state:'pend', title:'Earns cashback · £0.43 pending', text:'1% is paid into your account automatically when this payment settles.'},
+    answers:{
+      twice:{ text:'You’ve only been charged once. I checked the last 30 days and there’s a single £42.50 payment to Olive Tree Kitchen, and it’s still a pending hold. If the final charge shows up before the hold drops off, you may briefly see two lines. The hold disappears on its own and you won’t pay twice.',
+        facts:[['Payments to this merchant (30 days)','1'],['Current status','Pending hold'],['Duplicate found','No']],
+        sum:'Asked whether they were charged twice. AI confirmed one £42.50 pending hold, no duplicate.' },
+      cash:{ text:'This payment does earn cashback. You’ll get 1%, about £0.43, once it settles. It shows as pending until then and is paid automatically, so there’s nothing you need to claim.',
+        facts:[['Cashback rate','1%'],['Expected cashback','£0.43'],['Paid','When payment settles']],
+        sum:'Asked about cashback. AI explained £0.43 (1%) is pending and pays on settlement.' },
+      settle:{ text:'Restaurant holds usually settle in 2–3 working days, so expect this by Tuesday 24 November. If you added a tip, the final amount may be a little higher than £42.50. You don’t need to do anything.',
+        facts:[['Authorised','Fri 20 Nov, 19:42'],['Expected to settle','By Tue 24 Nov'],['Amount may change','Yes, if a tip was added']],
+        sum:'Asked when it settles. AI gave expected date Tue 24 Nov and noted possible tip adjustment.' }
+    }},
+  gift:{ id:'gift', raw:'GIFTCARDS DIRECT*GC4471', name:'GiftCards Direct', kind:'Gift card purchase', area:'Online', amount:-50.00,
+    status:'settled', day:'Yesterday', time:'13:05', when:'Thu 19 Nov 2026, 13:05', short:'19 Nov', logo:['GD','#6A3FB5'],
+    ref:'TXN-77C0-4B12', card:'Debit card ···· 4821', method:'Online payment', category:'Shopping', mcc:'5399 · Gift cards',
+    addr:'Online merchant', post:'giftcardsdirect.example', online:true,
+    explainTitle:'Why no cashback?',
+    explain:'Gift card and voucher purchases don’t earn cashback because they work like cash. You’re not missing out: spending directly at the shop the card is for would earn 1%.',
+    timeline:[['Authorised','19 Nov','ok'],['Settled','19 Nov','ok'],['Complete','','ok']],
+    cb:{state:'no', title:'Not eligible for cashback', text:'Excluded category: gift cards and vouchers. Also excluded: cash withdrawals, transfers and gambling.'},
+    answers:{
+      twice:{ text:'No, this was charged once. There’s a single £50.00 payment to GiftCards Direct on 19 November and it has fully settled.', facts:[['Payments to this merchant (30 days)','1'],['Status','Settled']], sum:'Asked about a double charge. AI confirmed a single settled £50.00 payment.' },
+      cash:{ text:'Gift card purchases are excluded from cashback because they work like cash. When you spend the gift card itself, that purchase doesn’t go through your account either. Buying at the shop directly with your card would earn 1%.', facts:[['Category','Gift cards & vouchers'],['Cashback','Not eligible']], sum:'Asked why no cashback. AI explained gift cards are an excluded category.' },
+      settle:{ text:'This payment already settled on Thursday 19 November, so the £50.00 is final and nothing else will change.', facts:[['Settled','Thu 19 Nov']], sum:'Asked about settlement. AI confirmed it settled on 19 Nov.' }
+    }},
+  groc:{ id:'groc', raw:'GREENLINE GROC 0291', name:'Greenline Grocers', kind:'Groceries', area:'Highbury, London', amount:-23.64, status:'settled', day:'Today', time:'12:18', when:'Fri 20 Nov 2026, 12:18', short:'20 Nov', logo:['GG','#1F7A4D'], ref:'TXN-51AE-9D03', card:'Debit card ···· 4821', method:'Contactless', category:'Groceries', mcc:'5411 · Grocery stores', addr:'48 Highbury Park', post:'London N5 2AA', cb:{state:'ok', title:'Cashback earned · £0.24', text:'Paid into your account on 20 Nov.'}, earned:0.24 },
+  salary:{ id:'salary', raw:'NORTHGATE STUDIO LTD SAL', name:'Salary · Northgate Studio Ltd', kind:'Incoming payment', area:'Bank transfer', amount:2150.00, status:'settled', day:'Yesterday', time:'06:01', when:'Thu 19 Nov 2026, 06:01', short:'19 Nov', logo:['NS','#33415C'], ref:'TXN-0C9B-11F7', card:'Faster Payment', method:'Bank transfer', category:'Income', mcc:'—', addr:'Bank transfer', post:'Ref: NOV SALARY', online:true, cb:{state:'no', title:'Not applicable', text:'Cashback applies to card spending only.'} },
+  stream:{ id:'stream', raw:'STREAMBOX* MONTHLY', name:'Streambox', kind:'Subscription', area:'Online', amount:-10.99, status:'settled', day:'Wed 18 Nov', time:'08:00', when:'Wed 18 Nov 2026, 08:00', short:'18 Nov', logo:['SB','#C2410C'], ref:'TXN-3D44-E8A1', card:'Debit card ···· 4821', method:'Recurring card payment', category:'Entertainment', mcc:'4899 · Streaming', addr:'Online merchant', post:'streambox.example', online:true, cb:{state:'ok', title:'Cashback earned · £0.11', text:'Paid into your account on 18 Nov.'}, earned:0.11 },
+  rail:{ id:'rail', raw:'CITYRAIL TRAVEL CHG', name:'CityRail', kind:'Travel', area:'London', amount:-8.10, status:'settled', day:'Wed 18 Nov', time:'23:59', when:'Wed 18 Nov 2026, 23:59', short:'18 Nov', logo:['CR','#1D4ED8'], ref:'TXN-A210-77B5', card:'Debit card ···· 4821', method:'Contactless (daily cap)', category:'Transport', mcc:'4111 · Commuter transport', addr:'Daily travel charge', post:'3 journeys', cb:{state:'ok', title:'Cashback earned · £0.08', text:'Paid into your account on 19 Nov.'}, earned:0.08 }
+};
+const ORDER = ['olive','groc','gift','salary','stream','rail'];
+const CHIPS = [['twice','Why was I charged twice?'],['cash','Why didn’t I get cashback?'],['settle','When will this settle?']];
+const REASONS = { unrec:['I don’t recognise this payment','fraud & disputes team'], amount:['The amount looks wrong','card payments team'], other:['Something else','card payments team'] };
+
+function genericAnswers(t){
+  const settled = t.status === 'settled';
+  return {
+    twice:{ text:`You were charged once. There’s a single ${money(t.amount)} payment to ${t.name} on ${t.short}.`, facts:[['Payments (30 days)','1'],['Status', settled ? 'Settled' : 'Pending']], sum:`Asked about a double charge. AI confirmed one ${money(t.amount)} payment.` },
+    cash:{ text: t.cb.state === 'ok' ? `This payment did earn cashback: ${t.cb.title.split('· ')[1]}, already paid into your account.` : `${t.cb.title}. ${t.cb.text}`, facts:[['Cashback', t.cb.title]], sum:'Asked about cashback. AI explained eligibility.' },
+    settle:{ text: settled ? `This payment settled on ${t.short}. The amount is final.` : 'This should settle within 2–3 working days.', facts:[['Status', settled ? 'Settled '+t.short : 'Pending']], sum:'Asked about settlement. AI confirmed status.' }
+  };
+}
+
+/* ---------- state ---------- */
+const S = { view:'list', txn:null, drawer:false, report:false, chat:[], asked:[], reason:null, busy:false, timers:[] };
+
+/* ---------- screen 1 ---------- */
+function renderList(){
+  const groups = {};
+  ORDER.forEach(id => { const t = TX[id]; (groups[t.day] = groups[t.day] || []).push(t); });
+  let rows = '';
+  for (const day in groups){
+    rows += `<div class="day">${day}</div><div class="txlist">`;
+    groups[day].forEach(t => {
+      const pending = t.status === 'pending';
+      let meta = pending ? `<span class="chip pending">${I.clock} Pending</span><span class="hint">Tap to see who this is</span>`
+        : `<span>${t.time} · ${t.category}</span>` + (t.id === 'gift' ? `<span class="chip no">${I.nocoin} Cashback ineligible</span>` : '');
+      let right = `<div class="amt ${t.amount > 0 ? 'in' : ''}">${amt(t.amount)}`;
+      if (t.earned) right += `<small>+${money(t.earned)} cashback</small>`;
+      if (pending) right += `<small class="no">Hold</small>`;
+      right += `</div>`;
+      rows += `<button class="tx ${pending ? 'hot' : ''}" data-open="${t.id}" aria-label="${esc(t.showRaw ? t.raw : t.name)}, ${money(t.amount)}${pending ? ', pending' : ''}">
+        <span class="logo" style="background:${pending ? '#9AA6B8' : t.logo[1]}">${pending ? '?' : t.logo[0]}</span>
+        <span class="tx-min"><span class="nm ${t.showRaw ? 'raw' : ''}" style="display:block">${esc(t.showRaw ? t.raw : t.name)}</span><span class="meta">${meta}</span></span>
+        ${right}</button>`;
+    });
+    rows += `</div>`;
+  }
+  $('#v-list').innerHTML = `
+    <header class="acct-head">
+      <div class="acct-top"><div><div class="acct-name">Current account · ···· 4821</div></div><div class="avatar">JD</div></div>
+      <div class="balance">£2,486<small>.19</small></div>
+      <div class="avail">Available £2,443.69 · <b>£42.50 on hold</b></div>
+      <div class="acct-actions"><span>Move money</span><span>Statements</span><span>Card</span></div>
+    </header>
+    <div class="cb-strip"><span class="ico">${I.coin}</span><span><div class="t">£4.82 cashback this month</div><div class="s">£0.43 pending · paid when payments settle</div></span></div>
+    <div class="tabs"><span class="on">Activity</span><span>Statements</span></div>
+    ${rows}<div class="list-foot"></div>`;
+}
+
+/* ---------- screen 2 ---------- */
+function mapSvg(t){
+  if (t.online) return `<div class="map" style="background:#EEF1F6;display:grid;place-items:center;color:#7F8BA0;font-size:13px">No physical location · ${esc(t.method)}</div>`;
+  return `<div class="map"><svg viewBox="0 0 360 118" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect width="360" height="118" fill="#E5EAF1"/>
+    <rect x="-10" y="80" width="120" height="60" rx="10" fill="#D2E7D8"/>
+    <rect x="270" y="-10" width="110" height="46" rx="10" fill="#D2E7D8"/>
+    <path d="M-10 70 L380 40" stroke="#fff" stroke-width="16"/>
+    <path d="M160 -10 L190 130" stroke="#fff" stroke-width="12"/>
+    <path d="M-10 18 L380 30" stroke="#fff" stroke-width="6"/>
+    <path d="M285 -10 L262 130" stroke="#fff" stroke-width="7"/>
+    <path d="M60 -10 L75 130" stroke="#fff" stroke-width="5"/>
+    <path d="M-10 104 L380 96" stroke="#fff" stroke-width="5"/>
+    <path d="M-10 70 L380 40" stroke="#F6D88C" stroke-width="2" stroke-dasharray="6 6"/>
+  </svg><span class="pin">${I.pin}</span></div>`;
+}
+function renderDetail(t){
+  const pending = t.status === 'pending';
+  const cbIcon = t.cb.state === 'no' ? I.nocoin : I.coin;
+  const tl = t.timeline || [['Authorised',t.short,'ok'],['Settled',t.short,'ok'],['Complete','','ok']];
+  $('#v-detail').innerHTML = `
+    <div class="topbar"><button class="iconbtn" data-action="back" aria-label="Back to activity">${I.back}</button><span class="ttl">Transaction</span><button class="iconbtn" aria-label="More options" data-action="noop">${I.more}</button></div>
+    <div class="d-hero">
+      <span class="logo lg" style="background:${t.logo[1]}">${t.logo[0]}</span>
+      <div class="d-name">${esc(t.name)}</div>
+      <div class="d-sub">${esc(t.kind)} · ${esc(t.area)}</div>
+      <div class="d-amt">${amt(t.amount)}</div>
+      ${pending ? `<span class="badge pending"><span class="dot"></span>Pending – Temporary hold</span>` : `<span class="badge settled">${I.check}Settled</span>`}
+      <div class="raw-line"><span class="lab">Shows on your statement as</span><code>${esc(t.raw)}</code></div>
+    </div>
+    ${t.explain ? `<div class="card explain">
+      <h3><span class="i">${I.info}</span>${esc(t.explainTitle)}</h3>
+      <p>${esc(t.explain)}</p>
+      <div class="timeline ${pending ? '' : 'done'}">${tl.map(s => `<div class="tl ${s[2]}"><i></i><b>${s[0]}</b><span>${s[1]}</span></div>`).join('')}</div>
+      <div class="cb-row"><span class="ico ${t.cb.state}">${cbIcon}</span><span><b>${esc(t.cb.title)}</b><span>${esc(t.cb.text)}</span></span></div>
+    </div>` : `<div class="card" style="padding:14px 16px"><div class="cb-row" style="margin:0;padding:0;border:0"><span class="ico ${t.cb.state}">${cbIcon}</span><span><b>${esc(t.cb.title)}</b><span>${esc(t.cb.text)}</span></span></div></div>`}
+    <div class="card">
+      ${mapSvg(t)}
+      <div class="loc"><span><b>${esc(t.addr)}</b><span>${esc(t.post)}</span></span><span>${esc(t.when.split(', ').slice(-1)[0])}</span></div>
+    </div>
+    <div class="card"><div class="rows">
+      <div class="row"><span class="k">Date &amp; time</span><span class="v">${esc(t.when)}</span></div>
+      <div class="row"><span class="k">Paid with</span><span class="v">${esc(t.card)}</span></div>
+    </div>
+      <button class="more-btn" data-action="toggle-more" aria-expanded="false" aria-controls="more-rows">More details ${I.down}</button>
+      <div class="rows" id="more-rows" hidden>
+        <div class="row"><span class="k">Method</span><span class="v">${esc(t.method)}</span></div>
+        <div class="row"><span class="k">Category</span><span class="v">${esc(t.category)}</span></div>
+        <div class="row"><span class="k">Merchant code</span><span class="v mono">${esc(t.mcc)}</span></div>
+        <div class="row"><span class="k">Transaction ID</span><span class="v mono">${esc(t.ref)}</span></div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="d-actions">
+      <button class="btn primary" data-action="ask">${I.spark}Ask AI about this transaction</button>
+      <button class="btn secondary" data-action="report">Report an issue / Speak to support</button>
+    </div>`;
+  $('#v-detail').scrollTop = 0;
+}
+
+/* ---------- screen 3: assistant ---------- */
+function answersFor(t){ return t.answers || genericAnswers(t); }
+function renderDrawer(){
+  const t = S.txn;
+  $('#drawer').innerHTML = `
+    <div class="grab"></div>
+    <div class="sheet-h"><h2>${I.spark.replace('class="spark"','style="color:#1E5EFF"')}Ask about this payment</h2><button class="iconbtn" data-action="close-sheets" aria-label="Close assistant">${I.close}</button></div>
+    <div class="ctx"><span class="logo" style="background:${t.logo[1]}">${t.logo[0]}</span>
+      <span><div class="t">${esc(t.name)} · ${amt(t.amount)}</div><div class="s">${t.status === 'pending' ? 'Pending' : 'Settled'} · ${t.short} · ${t.ref}</div></span>
+      <span class="att">${I.check}Attached</span></div>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="chips" id="chips"></div>
+    <button class="escal" data-action="handoff"><span class="ei">${I.person}</span><span><b>Still need help? Connect to a specialist</b><span>We’ll pass on this chat so you don’t repeat yourself</span></span>${I.chev}</button>
+    <form class="compose" id="compose" autocomplete="off"><input id="ask-input" placeholder="Ask anything about this payment" aria-label="Ask a question"><button type="submit" aria-label="Send">${I.send}</button></form>`;
+  const m = $('#msgs');
+  if (!S.chat.length){
+    S.chat.push({who:'bot', html:`Hi. I’ve pulled in your <b>${money(t.amount)}</b> payment to <b>${esc(t.name)}</b> from ${t.short}, so you don’t need to type any details. What would you like to know?`});
+  }
+  S.chat.forEach(c => m.insertAdjacentHTML('beforeend', bubble(c)));
+  renderChips();
+  m.scrollTop = m.scrollHeight;
+}
+function bubble(c){
+  if (c.who === 'me') return `<div class="msg me">${esc(c.text)}</div>`;
+  let h = `<div class="msg bot">${c.html}`;
+  if (c.facts) h += `<div class="facts">${c.facts.map(f => `<div><span>${esc(f[0])}</span><b>${esc(f[1])}</b></div>`).join('')}</div>`;
+  if (c.fb) h += `<div class="fb">Helpful? <button aria-label="Helpful" aria-pressed="false" data-action="fb">${I.up}</button><button aria-label="Not helpful" aria-pressed="false" data-action="fb">${I.dn}</button></div>`;
+  return h + `</div>`;
+}
+function renderChips(){
+  $('#chips').innerHTML = CHIPS.map(([k,l]) => `<button class="schip ${S.asked.includes(k) ? 'used' : ''}" data-chip="${k}" ${S.busy ? 'disabled' : ''}>${S.asked.includes(k) ? I.check : ''}${l}</button>`).join('');
+}
+function ask(key, typed){
+  if (S.busy) return;
+  const t = S.txn, m = $('#msgs');
+  const label = typed || CHIPS.find(c => c[0] === key)[1];
+  S.chat.push({who:'me', text:label});
+  m.insertAdjacentHTML('beforeend', bubble({who:'me', text:label}));
+  S.busy = true; renderChips();
+  m.insertAdjacentHTML('beforeend', `<div class="msg bot typing" id="typing"><i></i><i></i><i></i></div>`);
+  m.scrollTop = m.scrollHeight;
+  later(() => {
+    $('#typing') && $('#typing').remove();
+    let c;
+    if (key){
+      const a = answersFor(t)[key];
+      c = {who:'bot', html:esc(a.text), facts:a.facts, fb:true};
+      if (!S.asked.includes(key)) S.asked.push(key);
+    } else {
+      c = {who:'bot', html:'That sounds like something a specialist should look at with you. Tap <b>Connect to a specialist</b> below and I’ll pass on this payment and our chat, so you won’t need to explain it again.'};
+      S.asked.push('free:' + typed);
+    }
+    S.chat.push(c);
+    m.insertAdjacentHTML('beforeend', bubble(c));
+    S.busy = false; renderChips();
+    m.scrollTop = m.scrollHeight;
+  }, 950);
+}
+function route(text){
+  const s = text.toLowerCase();
+  if (/twice|double|duplicate|two/.test(s)) return 'twice';
+  if (/cash ?back|reward|1%/.test(s)) return 'cash';
+  if (/settle|pending|when|hold|long/.test(s)) return 'settle';
+  return null;
+}
+
+/* ---------- screen 4: handoff ---------- */
+function summaryLines(){
+  const t = S.txn, a = answersFor(t);
+  return S.asked.map(k => k.startsWith('free:') ? `Asked: “${k.slice(5)}”. AI suggested a specialist.` : a[k].sum);
+}
+function renderHandoff(){
+  const t = S.txn, lines = summaryLines();
+  const team = S.reason ? REASONS[S.reason][1] : 'card payments team';
+  const aiBlock = lines.length
+    ? `<div class="summary"><b style="color:var(--ink)">Summary for your specialist</b><ul>${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>`
+    : `<div class="d">${S.reason ? 'Reason you gave: <b>' + esc(REASONS[S.reason][0]) + '</b>' : 'No AI chat in this session.'}</div>`;
+  $('#v-handoff').innerHTML = `
+    <div class="topbar"><button class="iconbtn" data-action="back-detail" aria-label="Back to transaction">${I.back}</button><span class="ttl">Support</span><span style="width:40px"></span></div>
+    <div class="h-hero" id="h-hero">
+      <div class="ring" id="ring">${I.headset}</div>
+      <h2 class="h-title" id="h-title">Connecting you to a specialist</h2>
+      <p class="h-sub" id="h-sub">Our ${team} can see everything below.<br>You won’t need to explain it again.</p>
+    </div>
+    <div class="card wait" id="wait">
+      <span class="lab">Estimated wait</span><span class="live">Live</span>
+      <span class="big" id="wait-big">About 2 min</span><span class="pos" id="wait-pos">You’re 3rd in line</span>
+      <div class="bar"><i id="wait-bar" style="width:4%"></i></div>
+    </div>
+    <div id="agent-slot"></div>
+    <div class="card">
+      <div class="shared-h"><b>Shared with your specialist</b><span>Secure · in-app only</span></div>
+      <div class="att-row"><span class="tick" data-tick><span class="spin"></span>${I.check}</span>
+        <span><b>Transaction</b><span class="d">${esc(t.name)} · ${amt(t.amount)} · ${t.status === 'pending' ? 'Pending' : 'Settled'}<br><code>${t.ref}</code> · ${t.short}</span></span></div>
+      <div class="att-row"><span class="tick" data-tick><span class="spin"></span>${I.check}</span>
+        <span><b>${lines.length ? 'AI chat summary' : (S.reason ? 'Your reason for contact' : 'AI chat summary')}</b>${aiBlock}</span></div>
+      <div class="att-row"><span class="tick" data-tick><span class="spin"></span>${I.check}</span>
+        <span><b>Identity verified</b><span class="d">Signed in with Face ID at 19:56. No security questions needed.</span></span></div>
+    </div>
+    <div class="reassure">${I.shield}<span>Your specialist starts where the assistant left off. No need to repeat amounts, dates or what you’ve already asked.</span></div>
+    <div class="card" style="background:transparent;overflow:visible">
+      <button class="more-btn" data-action="toggle-agent" aria-expanded="false" aria-controls="agentview" style="padding:10px 4px">Preview what your specialist sees ${I.down}</button>
+    </div>
+    <div class="agentview" id="agentview" hidden>
+      <div class="ah">Agent workspace · Case ${t.ref.replace('TXN','CS')}<span>Priority: standard</span></div>
+      <div class="grid">
+        <span>Customer</span><b>Verified (Face ID) ✓</b>
+        <span>Transaction</span><b>${t.ref}</b>
+        <span>Merchant</span><b>${esc(t.raw)}</b>
+        <span>Amount</span><b>${money(t.amount)} · ${t.status.toUpperCase()}</b>
+        <span>Entry point</span><b>${lines.length ? 'AI assistant → escalate' : 'Report an issue'}</b>
+      </div>
+      <div class="ai"><b style="color:#fff">AI summary</b><br>${lines.length ? lines.map(esc).join('<br>') : (S.reason ? 'Reason: ' + esc(REASONS[S.reason][0]) : 'None')}</div>
+    </div>
+    <div class="h-actions">
+      <button class="btn secondary" data-action="notify" id="notify-btn">Notify me when they reply</button>
+      <button class="textbtn" data-action="cancel">Cancel request</button>
+    </div>`;
+  $('#v-handoff').scrollTop = 0;
+
+  // attach items one by one, then run the queue
+  const ticks = [...document.querySelectorAll('[data-tick]')];
+  ticks.forEach((el, i) => later(() => el.classList.add('done'), 600 + i * 650));
+  let remaining = 120; // seconds of simulated wait, sped up 10x
+  const tick = () => {
+    if (S.view !== 'handoff') return;
+    remaining = Math.max(0, remaining - 10);
+    const pos = remaining > 80 ? 3 : remaining > 40 ? 2 : 1;
+    const big = $('#wait-big'), p = $('#wait-pos'), bar = $('#wait-bar');
+    if (!big) return;
+    big.textContent = remaining >= 60 ? `About ${Math.ceil(remaining / 60)} min` : remaining > 0 ? `Under 1 min` : 'Joining now';
+    p.textContent = remaining > 0 ? `You’re ${['','next','2nd','3rd'][pos]}${pos === 1 ? '' : ' in line'}` : 'Specialist found';
+    if (pos === 1 && remaining > 0) p.textContent = 'You’re next';
+    bar.style.width = (100 - remaining / 120 * 96) + '%';
+    if (remaining > 0) later(tick, 1000); else later(agentJoined, 900);
+  };
+  later(tick, 2400);
+}
+function agentJoined(){
+  if (S.view !== 'handoff') return;
+  const t = S.txn;
+  const ring = $('#ring'); ring.classList.add('joined'); ring.textContent = 'PK';
+  $('#h-title').textContent = 'Priya has joined';
+  $('#h-sub').innerHTML = `Card payments specialist<br>Priya already has your details.`;
+  $('#wait').remove();
+  const worriedTwice = S.asked.includes('twice');
+  const line = S.reason === 'unrec'
+    ? `I can see you don’t recognise the ${money(t.amount)} payment to ${t.raw}. It’s ${t.name}, a ${t.kind.toLowerCase()} in ${t.area.split(',')[0]}. I’ll go through it with you, and I can block your card straight away if it wasn’t you.`
+    : `I can see your ${money(t.amount)} ${t.status} payment to ${t.name} on ${t.short}${worriedTwice ? ', and that you were worried about being charged twice' : ''}. I’ve got the assistant’s notes, so there’s no need to go over it again.`;
+  $('#agent-slot').innerHTML = `<div class="agent-msg"><span class="av">PK</span><div class="bub"><div class="who">Priya · Specialist</div>Hi, I’m Priya. ${esc(line)} How can I help?</div></div>
+    <form class="compose" data-agent style="padding:0 16px 12px"><input id="agent-input" placeholder="Reply to Priya" aria-label="Reply to Priya"><button type="submit" aria-label="Send">${I.send}</button></form>`;
+  $('#notify-btn').hidden = true;
+}
+
+/* ---------- navigation ---------- */
+const POS = {list:0, detail:1, handoff:2};
+function go(view){
+  S.view = view;
+  ['list','detail','handoff'].forEach(v => {
+    const el = $('#v-' + v);
+    el.className = 'view ' + (v === view ? 'now' : POS[v] < POS[view] ? 'before' : 'after');
+    el.inert = v !== view;
+  });
+  $('#screen').classList.toggle('light-bar', view !== 'list');
+  syncRail();
+}
+function openSheet(id, on){
+  S[id] = on;
+  $('#' + id).classList.toggle('on', on);
+  $('#scrim').classList.toggle('on', S.drawer || S.report);
+  $('#v-detail').inert = S.drawer || S.report || S.view !== 'detail';
+  syncRail();
+}
+function openTxn(id){
+  if (!S.txn || S.txn.id !== id){ S.chat = []; S.asked = []; S.reason = null; }
+  S.txn = TX[id];
+  renderDetail(S.txn);
+  go('detail');
+}
+function startHandoff(reason){
+  clearTimers();
+  if (reason) S.reason = reason;
+  openSheet('drawer', false); openSheet('report', false);
+  renderHandoff();
+  go('handoff');
+}
+function renderReport(){
+  $('#report').innerHTML = `<div class="grab"></div>
+    <div class="sheet-h"><h2>What’s wrong with this payment?</h2><button class="iconbtn" data-action="close-sheets" aria-label="Close">${I.close}</button></div>
+    <div class="report"><p>We’ll attach ${esc(S.txn.name)} · ${money(S.txn.amount)} to your request automatically.</p>
+      <button class="opt" data-reason="unrec"><span class="oi">${I.q}</span>I don’t recognise this payment${I.chev}</button>
+      <button class="opt" data-reason="amount"><span class="oi">${I.pound}</span>The amount looks wrong${I.chev}</button>
+      <button class="opt" data-reason="other"><span class="oi">${I.person}</span>Speak to support about something else${I.chev}</button>
+    </div>`;
+}
+
+/* ---------- rail ---------- */
+const NOTES = {
+  1:['Account activity',['The hold is surfaced twice: in the balance line (“£42.50 on hold”) and as an amber Pending chip.','The raw descriptor is shown as the bank receives it, with a “Tap to see who this is” cue.','Cashback state lives on the row: earned amounts in green, a grey “Cashback ineligible” chip for exclusions.']],
+  2:['Transaction detail',['Plain-English merchant name leads; the raw statement text sits underneath so people can match it to paper statements.','The explainer card answers “why pending” and “cashback?” before anyone has to ask.','Merchant code and transaction ID stay behind “More details”.']],
+  3:['AI assistant',['The payment is attached as a context card, so nobody types an amount or date.','Each answer comes with a small facts table people can check against the screen.','Escalation is always visible and promises the chat will travel with them.']],
+  4:['Specialist handoff',['Each shared item ticks off visibly: transaction, AI summary, verified identity.','A live queue position and wait estimate replace an open-ended spinner.','The specialist’s first message proves the context arrived. Expand “Preview what your specialist sees” for the agent view.']]
+};
+function currentStep(){ return S.view === 'list' ? 1 : S.view === 'handoff' ? 4 : S.drawer ? 3 : 2; }
+function syncRail(){
+  const n = currentStep();
+  document.querySelectorAll('.step').forEach(b => b.toggleAttribute('aria-current', false));
+  const cur = document.querySelector(`.step[data-jump="${n}"]`); cur && cur.setAttribute('aria-current','step');
+  const [title, items] = NOTES[n];
+  $('#note').innerHTML = `<strong>Design notes · ${title}</strong><ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
+}
+
+/* ---------- utils ---------- */
+function later(fn, ms){ const id = setTimeout(fn, ms); S.timers.push(id); return id; }
+function clearTimers(){ S.timers.forEach(clearTimeout); S.timers = []; S.busy = false; }
+let toastT;
+function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200); }
+function restart(){
+  clearTimers(); openSheet('drawer', false); openSheet('report', false);
+  S.txn = null; S.chat = []; S.asked = []; S.reason = null;
+  go('list'); $('#v-list').scrollTop = 0;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-open],[data-action],[data-chip],[data-reason],[data-jump]');
+  if (!el) return;
+  if (el.dataset.open) return openTxn(el.dataset.open);
+  if (el.dataset.chip) return ask(el.dataset.chip);
+  if (el.dataset.reason) return startHandoff(el.dataset.reason);
+  if (el.dataset.jump){
+    const n = +el.dataset.jump;
+    clearTimers(); openSheet('drawer', false); openSheet('report', false);
+    if (n === 1) return go('list');
+    if (!S.txn || n === 2 || n === 3) openTxn(S.txn ? S.txn.id : 'olive');
+    if (n === 3){ renderDrawer(); setTimeout(() => openSheet('drawer', true), 60); }
+    if (n === 4) startHandoff();
+    return;
+  }
+  switch (el.dataset.action){
+    case 'back': clearTimers(); go('list'); break;
+    case 'back-detail': clearTimers(); go('detail'); break;
+    case 'ask': renderDrawer(); openSheet('drawer', true); setTimeout(() => $('#msgs') && ($('#msgs').scrollTop = 1e6), 50); break;
+    case 'report': renderReport(); openSheet('report', true); break;
+    case 'close-sheets': openSheet('drawer', false); openSheet('report', false); break;
+    case 'handoff': startHandoff(); break;
+    case 'toggle-more': case 'toggle-agent': {
+      const open = el.getAttribute('aria-expanded') !== 'true';
+      el.setAttribute('aria-expanded', open);
+      $('#' + el.getAttribute('aria-controls')).hidden = !open;
+      break;
+    }
+    case 'fb': {
+      el.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === el));
+      toast('Thanks for the feedback'); break;
+    }
+    case 'notify': toast('We’ll notify you when Priya replies'); break;
+    case 'cancel': restart(); toast('Request cancelled'); break;
+    case 'restart': restart(); break;
+    case 'noop': toast('Not part of this prototype'); break;
+  }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  if (e.target.id === 'compose'){
+    const inp = $('#ask-input'), v = inp.value.trim();
+    if (!v || S.busy) return;
+    inp.value = '';
+    ask(route(v), v);
+  } else if (e.target.dataset.agent !== undefined){
+    const inp = $('#agent-input'); if (!inp.value.trim()) return;
+    inp.value = ''; toast('Live chat continues in the full product');
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && (S.drawer || S.report)){ openSheet('drawer', false); openSheet('report', false); } });
+
+renderList();
+go('list');
+})();
+</script>
