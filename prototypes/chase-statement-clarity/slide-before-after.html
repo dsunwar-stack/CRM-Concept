@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><title>Before and After Slide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* 16:9 slide: two phones (before / after) with numbered callouts between them */
+:root{--navy:#0B1F4D;--blue:#005EB8;--blue-soft:#E5EFFA;--ink:#141A24;--ink2:#4A5466;--ink3:#7D8798;--line:#E3E7ED;--bg:#F3F5F8;--amber:#8A5300;--amber-bg:#FFF1D6;--green:#0A7A4F;--green-bg:#E2F4EB;--red:#C4261D;--red-bg:#FDECEA;--font:"Open Sans","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;font-family:var(--font);color:var(--ink)}
+.slide{width:1920px;height:1080px;padding:64px 88px;display:flex;flex-direction:column;background:#fff}
+.eyebrow{font-size:20px;font-weight:700;color:var(--ink3);letter-spacing:.02em}
+h1{font-size:52px;font-weight:300;margin:6px 0 0;letter-spacing:-.01em}
+h1 b{font-weight:700;color:var(--blue)}
+.main{flex:1;display:grid;grid-template-columns:420px 1fr 420px;gap:48px;align-items:center;margin-top:70px}
+.phone{width:420px;height:800px;border-radius:52px;background:#0A0D14;padding:12px;box-shadow:0 30px 60px -30px rgba(11,31,77,.45)}
+.scr{width:100%;height:100%;border-radius:42px;overflow:hidden;background:var(--bg);position:relative}
+.tag{position:absolute;top:-46px;left:0;font-size:20px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.tag.b{color:var(--red)}.tag.a{color:var(--green)}
+.col{position:relative}
+/* before screen */
+.top{display:flex;align-items:center;padding:56px 22px 10px;font-size:16px;color:var(--ink2)}
+.top .w{flex:1;text-align:center;font-weight:600;margin-right:28px}
+.tabs{display:flex;justify-content:center;gap:34px;padding:16px 0 18px;font-size:17px;font-weight:700;color:var(--ink2)}
+.tabs .on{color:var(--blue);border-bottom:3px solid var(--blue);padding-bottom:4px}
+.acct{margin:0 16px;border-radius:22px;overflow:hidden;background:#fff;box-shadow:0 1px 0 var(--line)}
+.acct-h{background:var(--navy);color:#fff;padding:16px 18px 30px;display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.acct-h .l{display:flex;gap:10px;align-items:center}
+.acct-h .dot{width:26px;height:26px;border-radius:50%;border:5px solid #fff}
+.acct-b{margin-top:-16px;background:#fff;border-radius:20px 20px 0 0;padding:16px 18px 4px}
+.acct-b .bal{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+.acct-b .sub{font-size:14px;color:var(--ink2);margin-top:2px}
+.acct-b .sub b{color:var(--amber)}
+.lh{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 6px}
+.lh b{font-size:18px}
+.lh span{font-size:14px;color:var(--ink3)}
+.tx{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:13px 18px;border-top:1px solid var(--line);position:relative}
+.ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px}
+.nm{font-size:16px;font-weight:700}
+.nm.raw{font-family:var(--mono);font-size:14px;font-weight:500}
+.meta{font-size:13px;color:var(--ink3);margin-top:3px;display:flex;gap:6px;align-items:center}
+.chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--amber-bg);color:var(--amber)}
+.amt{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.tx.hl{background:#FFF8EC;box-shadow:inset 0 0 0 3px var(--red);border-radius:12px;margin:2px 8px;padding:12px 10px}
+.marker{position:absolute;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:20px;box-shadow:0 4px 10px rgba(0,0,0,.2);z-index:3}
+.marker.r{background:var(--red)}.marker.g{background:var(--green)}
+/* after screen */
+.bar{display:flex;align-items:center;justify-content:space-between;padding:56px 18px 4px;font-weight:700;font-size:17px}
+.hero{text-align:center;padding:6px 20px 12px}
+.hero .lg{width:62px;height:62px;border-radius:50%;background:#2F5D4E;color:#fff;display:grid;place-items:center;margin:0 auto;font-weight:700;font-size:20px}
+.hero .n{font-size:22px;font-weight:700;margin-top:8px}
+.hero .s{font-size:14px;color:var(--ink2)}
+.hero .a{font-size:34px;font-weight:700;margin:4px 0}
+.badge{display:inline-block;font-size:13px;font-weight:700;padding:5px 12px;border-radius:999px;background:var(--amber-bg);color:var(--amber)}
+.raw{margin-top:8px;font-size:12px;color:var(--ink3)}
+.raw code{display:inline-block;margin-top:3px;font-family:var(--mono);font-size:12px;border:1px dashed #C7CFDA;border-radius:6px;padding:2px 7px;background:#fff;color:var(--ink2)}
+.card{background:#fff;border-radius:18px;margin:0 16px 10px;padding:14px 16px;position:relative}
+.card h3{margin:0 0 4px;font-size:16px}
+.card p{margin:0;font-size:14px;line-height:1.5;color:var(--ink2)}
+.cb{display:flex;gap:10px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;font-weight:600;color:var(--green)}
+.btn{margin:4px 16px 0;height:50px;border-radius:999px;display:grid;place-items:center;font-weight:700;font-size:16px}
+.btn.p{background:var(--blue);color:#fff}
+.btn.s{background:#fff;color:var(--blue);box-shadow:inset 0 0 0 2px var(--blue);margin-top:8px;position:relative}
+/* callouts */
+.calls{display:flex;flex-direction:column;gap:26px}
+.call{display:grid;grid-template-columns:52px 1fr;gap:18px;align-items:start;padding:22px 26px;border-radius:20px;background:var(--bg)}
+.call .n{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:24px}
+.call.r .n{background:var(--red)}.call.g .n{background:var(--green)}
+.call .k{font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.call.r .k{color:var(--red)}.call.g .k{color:var(--green)}
+.call .t{font-size:24px;line-height:1.35;margin-top:4px;font-weight:600}
+.call .d{font-size:18px;line-height:1.45;color:var(--ink2);margin-top:6px}
+.agent{margin-top:8px;border-radius:14px;background:#fff;border:1px solid var(--line);padding:12px 14px;font-size:15px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.agent span{color:var(--ink3)}
+.agent b{font-weight:600}
+</style></head>
+<body><div class="slide">
+  <div class="eyebrow">Customer Experience · Case Updates</div>
+  <h1>From <b>“what is this charge?”</b> to answered, in the app</h1>
+  <div class="main">
+    <!-- BEFORE -->
+    <div class="col">
+      <div class="tag b">Today</div>
+      <div class="phone"><div class="scr">
+        <div class="top"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A5466" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span class="w">Welcome back, Alex</span></div>
+        <div class="tabs"><span class="on">Spend</span><span>Save &amp; Invest</span></div>
+        <div class="acct">
+          <div class="acct-h"><span class="l"><span class="dot"></span>Debit</span><span>See card ⌄</span></div>
+          <div class="acct-b"><div class="bal">£2,486.19</div><div class="sub">Available £2,443.69 · <b>£42.50 on hold</b></div></div>
+          <div class="lh"><b>Recent activity</b><span>Today</span></div>
+          <div class="tx hl">
+            <span class="ic" style="background:#98A3B4">?</span>
+            <span><div class="nm raw">SQ *OLIVETREE KTCHN</div><div class="meta"><span class="chip">Pending</span>19:42</div></span>
+            <span class="amt">£42.50</span>
+            <span class="marker r" style="right:76px;top:-20px">1</span>
+          </div>
+          <div class="tx"><span class="ic" style="background:#1F7A4D">GG</span><span><div class="nm">Greenline Grocers</div><div class="meta">12:18 · Groceries</div></span><span class="amt">£23.64</span></div>
+          <div class="tx"><span class="ic" style="background:#33415C">NS</span><span><div class="nm">Northgate Studio Ltd</div><div class="meta">Yesterday · Salary</div></span><span class="amt" style="color:var(--green)">+£2,150.00</span></div>
+          <div class="tx"><span class="ic" style="background:#C2410C">SB</span><span><div class="nm">Streambox</div><div class="meta">18 Nov · Subscription</div></span><span class="amt">£10.99</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- CALLOUTS -->
+    <div class="calls">
+      <div class="call r"><span class="n">1</span><span>
+        <div class="k">Pain point</div>
+        <div class="t">Unfamiliar name + pending hold = “Is this fraud? Was I charged twice?”</div>
+        <div class="d">The customer calls or emails. The agent starts from zero and spends time on a simple query.</div>
+      </span></div>
+      <div class="call g"><span class="n">2</span><span>
+        <div class="k">Solution · in the app</div>
+        <div class="t">Plain-English merchant, why it’s pending, when it settles, cashback status</div>
+        <div class="d">Quick answers to common questions. No chatbot.</div>
+      </span></div>
+      <div class="call g"><span class="n">3</span><span>
+        <div class="k">Solution · for the team</div>
+        <div class="t">Still unsure? One tap to a specialist, with context already attached</div>
+        <div class="agent"><span>Case type</span><b>Pending payment query</b><span>Merchant</span><b>Olive Tree Kitchen Ltd · Restaurant</b><span>Customer</span><b>Verified · read 2 answers</b></div>
+      </span></div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="col">
+      <div class="tag a">Proposed</div>
+      <div class="phone"><div class="scr">
+        <div class="bar"><span>‹</span><span>Payment details</span><span>⋯</span></div>
+        <div class="hero">
+          <div class="lg">OT</div>
+          <div class="n">Olive Tree Kitchen</div>
+          <div class="s">Restaurant · Upper Street, Islington</div>
+          <div class="a">£42.50</div>
+          <span class="badge">● Pending – Temporary hold</span>
+          <div class="raw">Shows on your statement as<br><code>SQ *OLIVETREE KTCHN LDN</code></div>
+        </div>
+        <div class="card">
+          <span class="marker g" style="left:-26px;top:-14px">2</span>
+          <h3>Why is this pending?</h3>
+          <p>The restaurant placed a temporary hold when you paid. It usually settles within 2–3 working days, by Tue 24 Nov.</p>
+          <div class="cb">● Earns cashback · £0.43 when it settles</div>
+        </div>
+        <div class="btn p">Get answers about this payment</div>
+        <div class="btn s">Talk to a specialist<span class="marker g" style="left:-26px;top:5px">3</span></div>
+      </div></div>
+    </div>
+  </div>
+</div></body></html>
